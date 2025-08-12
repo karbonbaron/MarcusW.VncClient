@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Net.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -78,8 +79,20 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Initialization
 
             // Read the first part of the message of which the length is known
             ReadOnlyMemory<byte> headerBytes = await transport.Stream.ReadAllAsync(24, cancellationToken).ConfigureAwait(false);
-            Size framebufferSize = GetFramebufferSize(headerBytes.Span[..4]);
-            PixelFormat pixelFormat = GetPixelFormat(headerBytes.Span[4..20]);
+            Size framebufferSize;
+            PixelFormat pixelFormat;
+            if (transport.Stream is SslStream)
+            {
+                // 3 bytes padding as per https://vncdotool.readthedocs.io/en/0.8.0/rfbproto.html#setpixelformat
+                // do not want to break original code so only based on SslStream used in VeNCrypt scurity type based decision
+                framebufferSize = GetFramebufferSize(headerBytes.Span[3..7]);
+                pixelFormat = GetPixelFormat(headerBytes.Span[7..20]);
+            }
+            else
+            {
+                framebufferSize = GetFramebufferSize(headerBytes.Span[..4]);
+                pixelFormat = GetPixelFormat(headerBytes.Span[4..20]);
+            }
             uint desktopNameLength = BinaryPrimitives.ReadUInt32BigEndian(headerBytes.Span[20..24]);
 
             // Read desktop name

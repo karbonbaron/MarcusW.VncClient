@@ -13,7 +13,6 @@
             <SubType>Designer</SubType>
         </AvaloniaResource>
         <AvaloniaResource Include="Assets\**" />
-        <Folder Include="Views\Dialogs" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="0.10.0" />
@@ -23,5 +22,15 @@
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\..\src\MarcusW.VncClient.Avalonia\MarcusW.VncClient.Avalonia.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <AvaloniaResource Update="Views\Dialogs\EnterCredentialsDialog.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </AvaloniaResource>
+    </ItemGroup>
+    <ItemGroup>
+      <Compile Update="Views\Dialogs\EnterCredentialsDialog.xaml.cs">
+        <DependentUpon>EnterCredentialsDialog.xaml</DependentUpon>
+      </Compile>
     </ItemGroup>
 </Project>

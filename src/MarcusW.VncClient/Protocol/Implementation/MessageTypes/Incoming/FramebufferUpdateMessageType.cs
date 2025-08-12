@@ -76,114 +76,124 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
             Stream transportStream = transport.Stream;
             Span<byte> buffer = _buffer.AsSpan();
 
-            // Read 3 header bytes
+            //// Read 3 header bytes
             transportStream.ReadAll(buffer.Slice(0, 3), cancellationToken);
 
-            // Read number of rectangles (first byte is padding)
-            ushort numberOfRectangles = BinaryPrimitives.ReadUInt16BigEndian(buffer[1..]);
-            if (numberOfRectangles == 0)
-                return;
-
-            if (_logger.IsEnabled(LogLevel.Debug))
+            byte messageType = buffer[1];
+            if (messageType == 6)
             {
-                _logger.LogDebug("Receiving framebuffer update with {rectangles} rectangles. Current framebuffer size: {framebufferSize}",
-                    numberOfRectangles == 65535 ? "a dynamic amount of" : numberOfRectangles.ToString(CultureInfo.CurrentCulture), _state.RemoteFramebufferSize);
-                _stopwatch.Restart();
+                byte[] vendorbuffer = new byte[64]; // large enough for vendor string
+                var read = transport.Stream.Read(vendorbuffer, 0, buffer.Length);
             }
-
-            // Get the current render target (can be null)
-            IRenderTarget? renderTarget = _context.Connection.RenderTarget;
-            IFramebufferReference? targetFramebuffer = null;
-
-            ushort rectanglesRead;
-            try
+            else
             {
-                // Read rectangles
-                for (rectanglesRead = 0; rectanglesRead < numberOfRectangles; rectanglesRead++)
+                // Read number of rectangles (first byte is padding)
+                ushort numberOfRectangles = BinaryPrimitives.ReadUInt16BigEndian(buffer[1..]);
+                if (numberOfRectangles == 0)
+                    return;
+
+                if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    transportStream.ReadAll(buffer, cancellationToken);
+                    _logger.LogDebug("Receiving framebuffer update with {rectangles} rectangles. Current framebuffer size: {framebufferSize}",
+                        numberOfRectangles == 65535 ? "a dynamic amount of" : numberOfRectangles.ToString(CultureInfo.CurrentCulture), _state.RemoteFramebufferSize);
+                    _stopwatch.Restart();
+                }
 
-                    // Read rectangle information
-                    ushort x = BinaryPrimitives.ReadUInt16BigEndian(buffer);
-                    ushort y = BinaryPrimitives.ReadUInt16BigEndian(buffer[2..]);
-                    ushort width = BinaryPrimitives.ReadUInt16BigEndian(buffer[4..]);
-                    ushort height = BinaryPrimitives.ReadUInt16BigEndian(buffer[6..]);
-                    Rectangle rectangle = new Rectangle(x, y, width, height);
+                // Get the current render target (can be null)
+                IRenderTarget? renderTarget = _context.Connection.RenderTarget;
+                IFramebufferReference? targetFramebuffer = null;
 
-                    // Read encoding type
-                    int encodingTypeId = BinaryPrimitives.ReadInt32BigEndian(buffer[8..]);
-
-                    IEncodingType encodingType;
-                    if (_lastEncodingTypeId == encodingTypeId)
+                ushort rectanglesRead;
+                try
+                {
+                    // Read rectangles
+                    for (rectanglesRead = 0; rectanglesRead < numberOfRectangles; rectanglesRead++)
                     {
-                        // Skip lookup in case we receive the same encoding type multiple times
-                        encodingType = _lastEncodingType!;
-                    }
-                    else
-                    {
-                        // Lookup encoding type and remember it for next time
-                        encodingType = _lastEncodingType = LookupEncodingType(encodingTypeId);
-                        _lastEncodingTypeId = encodingTypeId;
-                    }
+                        transportStream.ReadAll(buffer, cancellationToken);
 
-                    if (encodingType is IFrameEncodingType frameEncodingType)
-                    {
-                        if (_logger.IsEnabled(LogLevel.Trace))
-                            _logger.LogTrace("Reading frame encoding type {encodingType} for rectangle {rectangle}.", frameEncodingType.Name, rectangle);
+                        // Read rectangle information
+                        ushort x = BinaryPrimitives.ReadUInt16BigEndian(buffer);
+                        ushort y = BinaryPrimitives.ReadUInt16BigEndian(buffer[2..]);
+                        ushort width = BinaryPrimitives.ReadUInt16BigEndian(buffer[4..]);
+                        ushort height = BinaryPrimitives.ReadUInt16BigEndian(buffer[6..]);
+                        Rectangle rectangle = new Rectangle(x, y, width, height);
 
-                        // Lock the target framebuffer, if there is no reference yet
-                        if (renderTarget != null && targetFramebuffer == null)
+                        // Read encoding type
+                        int encodingTypeId = BinaryPrimitives.ReadInt32BigEndian(buffer[8..]);
+
+                        IEncodingType encodingType;
+                        if (_lastEncodingTypeId == encodingTypeId)
                         {
-                            targetFramebuffer = renderTarget.GrabFramebufferReference(_state.RemoteFramebufferSize, _state.RemoteFramebufferLayout);
-                            if (targetFramebuffer.Size != _state.RemoteFramebufferSize)
-                                throw new RfbProtocolException("Framebuffer reference is not of the requested size.");
+                            // Skip lookup in case we receive the same encoding type multiple times
+                            encodingType = _lastEncodingType!;
+                        }
+                        else
+                        {
+                            // Lookup encoding type and remember it for next time
+                            encodingType = _lastEncodingType = LookupEncodingType(encodingTypeId);
+                            _lastEncodingTypeId = encodingTypeId;
                         }
 
-                        try
+                        if (encodingType is IFrameEncodingType frameEncodingType)
                         {
-                            // Read frame encoding
-                            frameEncodingType.ReadFrameEncoding(transportStream, targetFramebuffer, rectangle, _state.RemoteFramebufferSize, _state.RemoteFramebufferFormat);
+                            if (_logger.IsEnabled(LogLevel.Trace))
+                                _logger.LogTrace("Reading frame encoding type {encodingType} for rectangle {rectangle}.", frameEncodingType.Name, rectangle);
 
-                            // Visualize rectangle
-                            if (targetFramebuffer != null && _visualizeRectangles)
-                                VisualizeRectangle(targetFramebuffer, rectangle, frameEncodingType.VisualizationColor);
-                        }
-                        finally
-                        {
-                            // Release the framebuffer reference if per-rectangle updates are enabled so a new one gets requested for the next rectangle.
-                            if (_lockTargetByRectangle)
+                            // Lock the target framebuffer, if there is no reference yet
+                            if (renderTarget != null && targetFramebuffer == null)
                             {
-                                targetFramebuffer?.Dispose();
-                                targetFramebuffer = null;
+                                targetFramebuffer = renderTarget.GrabFramebufferReference(_state.RemoteFramebufferSize, _state.RemoteFramebufferLayout);
+                                if (targetFramebuffer.Size != _state.RemoteFramebufferSize)
+                                    throw new RfbProtocolException("Framebuffer reference is not of the requested size.");
+                            }
+
+                            try
+                            {
+                                // Read frame encoding
+                                frameEncodingType.ReadFrameEncoding(transportStream, targetFramebuffer, rectangle, _state.RemoteFramebufferSize, _state.RemoteFramebufferFormat);
+
+                                // Visualize rectangle
+                                if (targetFramebuffer != null && _visualizeRectangles)
+                                    VisualizeRectangle(targetFramebuffer, rectangle, frameEncodingType.VisualizationColor);
+                            }
+                            finally
+                            {
+                                // Release the framebuffer reference if per-rectangle updates are enabled so a new one gets requested for the next rectangle.
+                                if (_lockTargetByRectangle)
+                                {
+                                    targetFramebuffer?.Dispose();
+                                    targetFramebuffer = null;
+                                }
                             }
                         }
-                    }
-                    else if (encodingType is IPseudoEncodingType pseudoEncodingType)
-                    {
-                        if (_logger.IsEnabled(LogLevel.Trace))
-                            _logger.LogTrace("Reading pseudo encoding type {encodingType} for rectangle {rectangle}.", pseudoEncodingType.Name, rectangle);
+                        else if (encodingType is IPseudoEncodingType pseudoEncodingType)
+                        {
+                            if (_logger.IsEnabled(LogLevel.Trace))
+                                _logger.LogTrace("Reading pseudo encoding type {encodingType} for rectangle {rectangle}.", pseudoEncodingType.Name, rectangle);
 
-                        // Stop after a LastRect encoding
-                        if (encodingType is ILastRectEncodingType)
-                            break;
+                            // Stop after a LastRect encoding
+                            if (encodingType is ILastRectEncodingType)
+                                break;
 
-                        // Ignore the rectangle information and just call the pseudo encoding
-                        pseudoEncodingType.ReadPseudoEncoding(transportStream, rectangle);
+                            // Ignore the rectangle information and just call the pseudo encoding
+                            pseudoEncodingType.ReadPseudoEncoding(transportStream, rectangle);
+                        }
                     }
                 }
-            }
-            finally
-            {
-                // Release any remaining framebuffer reference
-                targetFramebuffer?.Dispose();
+                finally
+                {
+                    // Release any remaining framebuffer reference
+                    targetFramebuffer?.Dispose();
+                }
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _stopwatch.Stop();
+                    _logger.LogDebug("Received and rendered/processed {rectangles} rectangles in {milliseconds}ms. Please note that debug builds are way less optimized.",
+                        rectanglesRead, _stopwatch.ElapsedMilliseconds);
+                }
             }
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _stopwatch.Stop();
-                _logger.LogDebug("Received and rendered/processed {rectangles} rectangles in {milliseconds}ms. Please note that debug builds are way less optimized.",
-                    rectanglesRead, _stopwatch.ElapsedMilliseconds);
-            }
 
             // Ensure more framebuffer updates are coming
             RequestNextFramebufferUpdate();

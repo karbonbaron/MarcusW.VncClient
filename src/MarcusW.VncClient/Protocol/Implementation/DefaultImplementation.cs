@@ -123,6 +123,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
 
             yield return new NoneSecurityType(context);
             yield return new VncAuthenticationSecurityType(context);
+            yield return new VeNCryptAuthenticationSecurityType(context);
         }
 
         /// <summary>

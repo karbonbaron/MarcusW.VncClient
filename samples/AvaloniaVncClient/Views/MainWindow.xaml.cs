@@ -41,6 +41,10 @@ namespace AvaloniaVncClient.Views
                     string? password = await new EnterPasswordDialog().ShowDialog<string?>(this).ConfigureAwait(true);
                     context.SetOutput(password);
                 }).DisposeWith(disposable);
+                ViewModel.InteractiveAuthenticationHandler.EnterCredentialsInteraction.RegisterHandler(async context => {
+                    (string?, string?) credentials = await new EnterCreadentialsDialog().ShowDialog<(string?, string?)>(this).ConfigureAwait(true);
+                    context.SetOutput(credentials);
+                }).DisposeWith(disposable);
             });
 
             // Register keybinding for exiting fullscreen
