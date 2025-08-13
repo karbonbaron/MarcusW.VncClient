@@ -9,7 +9,7 @@ namespace AvaloniaVncClient
     {
         public bool SupportsRecycling => false;
 
-        public IControl Build(object data)
+        public Control Build(object data)
         {
             var viewName = data.GetType().FullName?.Replace("ViewModel", "View");
             if (viewName == null)

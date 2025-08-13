@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net;
 using System.Reactive;
@@ -18,8 +18,8 @@ namespace AvaloniaVncClient.ViewModels
     {
         private readonly ConnectionManager _connectionManager;
 
-        private string _host = "fedora-vm";
-        private int _port = 5901;
+        private string _host = "10.203.152.154";
+        private int _port = 5900;
         private RfbConnection? _rfbConnection;
         private string? _errorMessage;
 

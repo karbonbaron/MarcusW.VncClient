@@ -50,7 +50,7 @@
                 IsVisible="{Binding RfbConnection, Converter={x:Static ObjectConverters.IsNotNull}}">
             <Grid RowDefinitions="Auto,*,Auto,*,Auto" Margin="10">
                 <TextBlock Grid.Row="0" Margin="0,0,0,10" FontWeight="Bold" Text="Used Message Types:" />
-                <ListBox Grid.Row="1" Margin="0,0,0,10" Items="{Binding RfbConnection.UsedMessageTypes}" BorderThickness="0">
+                <ListBox Grid.Row="1" Margin="0,0,0,10" ItemsSource="{Binding RfbConnection.UsedMessageTypes}" BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name}" />
@@ -58,7 +58,7 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
                 <TextBlock Grid.Row="2" Margin="0,0,0,10" FontWeight="Bold" Text="Used Encoding Types:" />
-                <ListBox Grid.Row="3" Items="{Binding RfbConnection.UsedEncodingTypes}" BorderThickness="0">
+                <ListBox Grid.Row="3" ItemsSource="{Binding RfbConnection.UsedEncodingTypes}" BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name}" />
