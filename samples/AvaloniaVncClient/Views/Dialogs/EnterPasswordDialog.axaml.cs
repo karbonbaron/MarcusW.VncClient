@@ -5,12 +5,11 @@ using Avalonia.Markup.Xaml;
 
 namespace AvaloniaVncClient.Views.Dialogs
 {
-    public class EnterCreadentialsDialog : Window
+    public partial class EnterPasswordDialog : Window
     {
-        private TextBox UsernameTextBox => this.FindControl<TextBox>("UsernameTextBox");
-        private TextBox PasswordTextBox => this.FindControl<TextBox>("PasswordTextBox");
+        private TextBox _PasswordTextBox => this.FindControl<TextBox>("PasswordTextBox");
 
-        public EnterCreadentialsDialog()
+        public EnterPasswordDialog()
         {
             InitializeComponent();
         }
@@ -27,7 +26,7 @@ namespace AvaloniaVncClient.Views.Dialogs
 
         public void OnOkClick(object sender, RoutedEventArgs e)
         {
-            Close((UsernameTextBox.Text, PasswordTextBox.Text));
+            Close(_PasswordTextBox.Text);
         }
     }
 }

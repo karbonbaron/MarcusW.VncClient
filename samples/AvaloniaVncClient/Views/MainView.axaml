@@ -1,4 +1,5 @@
-<reactiveUi:ReactiveWindow x:TypeArguments="vm:MainWindowViewModel"
+<reactiveUi:ReactiveUserControl x:TypeArguments="vm:MainWindowViewModel"
+                           x:Class="AvaloniaVncClient.Views.MainView"
                            xmlns="https://github.com/avaloniaui"
                            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                            xmlns:vm="clr-namespace:AvaloniaVncClient.ViewModels;assembly=AvaloniaVncClient"
@@ -7,11 +8,7 @@
                            xmlns:vnc="clr-namespace:MarcusW.VncClient.Avalonia;assembly=MarcusW.VncClient.Avalonia"
                            xmlns:vncconverters="clr-namespace:MarcusW.VncClient.Avalonia.Converters;assembly=MarcusW.VncClient.Avalonia"
                            xmlns:reactiveUi="http://reactiveui.net"
-                           mc:Ignorable="d" Width="1400" Height="1000"
-                           x:Class="AvaloniaVncClient.Views.MainWindow"
-                           Icon="/Assets/avalonia-logo.ico"
-                           Title="Avalonia VNC Client">
-
+                           mc:Ignorable="d" Width="1400" Height="1000">
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
@@ -84,4 +81,4 @@
         </ScrollViewer>
     </DockPanel>
 
-</reactiveUi:ReactiveWindow>
+</reactiveUi:ReactiveUserControl>

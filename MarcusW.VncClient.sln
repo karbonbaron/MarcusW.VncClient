@@ -1,9 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36221.1 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2CB2F0BD-AABA-4047-AAEE-E3AA512EFE47}"
-ProjectSection(SolutionItems) = preProject
-	src\Directory.Build.props = src\Directory.Build.props
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarcusW.VncClient", "src\MarcusW.VncClient\MarcusW.VncClient.csproj", "{90137400-5377-4EB1-AD8A-E200F9006B7D}"
 EndProject
@@ -22,6 +25,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaVncClient", "samples\AvaloniaVncClient\AvaloniaVncClient.csproj", "{DEF2D06D-D010-41B8-9011-693F6969AA1D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "benchmarks\Benchmarks\Benchmarks.csproj", "{73A59C77-A920-476C-B4E2-07437E2C971D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarcusW.VncClient.Blazor", "src\MarcusW.VncClient.Blazor\MarcusW.VncClient.Blazor.csproj", "{14F48035-B2B0-052D-637F-F1C724CCCDEC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +54,13 @@ Global
 		{73A59C77-A920-476C-B4E2-07437E2C971D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73A59C77-A920-476C-B4E2-07437E2C971D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73A59C77-A920-476C-B4E2-07437E2C971D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14F48035-B2B0-052D-637F-F1C724CCCDEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14F48035-B2B0-052D-637F-F1C724CCCDEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14F48035-B2B0-052D-637F-F1C724CCCDEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14F48035-B2B0-052D-637F-F1C724CCCDEC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{90137400-5377-4EB1-AD8A-E200F9006B7D} = {2CB2F0BD-AABA-4047-AAEE-E3AA512EFE47}
@@ -56,5 +68,6 @@ Global
 		{7CE9299C-5017-47E4-919F-9DE04E8D9751} = {2CB2F0BD-AABA-4047-AAEE-E3AA512EFE47}
 		{DEF2D06D-D010-41B8-9011-693F6969AA1D} = {F24C1D8F-7ADE-4900-BB9B-817D0AD10C50}
 		{73A59C77-A920-476C-B4E2-07437E2C971D} = {678728BC-1F28-4C65-894B-545C62739E73}
+		{14F48035-B2B0-052D-637F-F1C724CCCDEC} = {2CB2F0BD-AABA-4047-AAEE-E3AA512EFE47}
 	EndGlobalSection
 EndGlobal
