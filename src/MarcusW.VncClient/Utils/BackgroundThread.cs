@@ -99,7 +99,17 @@ namespace MarcusW.VncClient.Utils
                 // Do your work...
                 ThreadWorker(cancellationToken);
             }
-            catch (Exception exception) when (!(exception is OperationCanceledException || exception is ThreadAbortException))
+            catch (OperationCanceledException)
+            {
+                // Cancellation is expected during shutdown - don't treat as an error
+                // This prevents unhandled exceptions from terminating the application
+            }
+            catch (ThreadAbortException)
+            {
+                // Thread abort is also expected during shutdown
+                throw; // Re-throw ThreadAbortException as it requires special handling
+            }
+            catch (Exception exception)
             {
                 Failed?.Invoke(this, new BackgroundThreadFailedEventArgs(exception));
             }

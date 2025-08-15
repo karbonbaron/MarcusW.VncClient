@@ -1,0 +1,617 @@
+@using MarcusW.VncClient.Blazor.Adapters.Rendering
+@using MarcusW.VncClient.Blazor.Services
+@using MarcusW.VncClient.Output;
+@using MarcusW.VncClient.Rendering
+@using System.Collections.Immutable
+@using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Outgoing
+@using Microsoft.AspNetCore.Components.Web
+@using System.ComponentModel
+@using Microsoft.JSInterop
+
+@implements IRenderTarget
+@implements IOutputHandler
+@implements IDisposable
+
+@inject JsInterop jsInterop
+@inject IFramebufferService framebufferService
+@inject IInputService inputService
+@inject IRenderingService renderingService
+@inject IFullscreenService fullscreenService
+
+<div id="vnc-container-@_canvasId" class="vnc-viewer @(_isFullscreen ? "fullscreen" : "")" style="position: relative; display: inline-block;">
+    <canvas @ref="_canvas" 
+            id="vncCanvas_@_canvasId" 
+            width="@canvasSize.Width" 
+            height="@canvasSize.Height" 
+            style="border: 1px solid #ddd; background-color: #000; max-width: @(_isFullscreen ? "100vw" : "100%"); max-height: @(_isFullscreen ? "100vh" : "70vh");"
+            @onmousedown="OnMouseDown"
+            @onmouseup="OnMouseUp"
+            @onmousemove="OnMouseMove"
+            @onwheel="OnWheel"
+            @onkeydown="OnKeyDown"
+            @onkeyup="OnKeyUp"
+            tabindex="0">
+    </canvas>
+    
+    @if (_isFullscreen)
+    {
+        <div class="fullscreen-controls" style="position: absolute; top: 20px; right: 20px; z-index: 10000;">
+            <button class="btn btn-outline-light btn-sm" @onclick="ExitFullscreenAsync">
+                <i class="fas fa-compress"></i> Exit Fullscreen (ESC)
+            </button>
+        </div>
+    }
+    
+    @if (_connection == null)
+    {
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; text-align: center;">
+            <p>No VNC connection</p>
+        </div>
+    }
+</div>
+
+<style>
+    .vnc-viewer.fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: black !important;
+        z-index: 9999 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    .vnc-viewer.fullscreen canvas {
+        border: none !important;
+        object-fit: contain !important;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public RfbConnection? Connection 
+    { 
+        get => _connection;
+        set
+        {
+            if (_connection != value && !_disposed)
+            {
+                DetachFromConnection();
+                _connection = value;
+                AttachToConnection();
+                StateHasChanged();
+            }
+        }
+    }
+    
+    // Fullscreen properties
+    public bool IsFullscreen => _isFullscreen;
+    
+    // Fullscreen events
+    [Parameter] public EventCallback<bool> OnFullscreenChange { get; set; }
+
+    private RfbConnection? _connection;
+    private readonly string _canvasId = Guid.NewGuid().ToString();
+    
+    // Persistent framebuffer for incremental updates
+    private byte[]? _persistentFramebuffer;
+    private Size _framebufferSize;
+    private PixelFormat? _framebufferFormat;
+    private bool _disposed;
+    
+    // Cached RGBA buffer to avoid repeated allocations
+
+    
+    // Immediate rendering for maximum responsiveness
+    
+    // Rectangle-based rendering for dirty region updates
+    private readonly List<Rectangle> _dirtyRectangles = new List<Rectangle>();
+    private readonly object _dirtyRectanglesLock = new object();
+    
+    // Fullscreen functionality
+    private bool _isFullscreen = false;
+    private DotNetObjectReference<VncView>? _dotNetObjectRef;
+
+    private static PixelFormat _PixelFormat = new PixelFormat(
+        "RGBA", // Assuming the format name is "RGBA"
+        32,     // BitsPerPixel
+        24,     // Depth
+        true,   // BigEndian
+        true,   // TrueColor
+        false,  // HasAlpha
+        255,    // RedMax
+        255,    // GreenMax
+        255,    // BlueMax
+        0,      // AlphaMax
+        0,      // RedShift
+        8,      // GreenShift
+        16,     // BlueShift
+        0       // AlphaShift
+    );
+
+    public CanvasReference canvasReference = new CanvasReference(null, new Size(800, 600), _PixelFormat, 96, 96);
+    private Size canvasSize => canvasReference.Size;
+    private ElementReference? _canvas;
+    private readonly object _canvasReplacementLock = new object();
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _canvas.HasValue)
+        {
+            // Initialize canvas dimensions
+            var dimensions = await jsInterop.GetDimensions();
+            canvasReference = new CanvasReference(_canvas, new Size(800, 600), _PixelFormat, dimensions.Item1, dimensions.Item2);
+            
+            // Set up fullscreen change listener
+            _dotNetObjectRef = DotNetObjectReference.Create(this);
+            await jsInterop.AddFullscreenChangeListener(DotNetObjectReference.Create((object)this), nameof(OnFullscreenChanged));
+            
+            // Clear the canvas to show it's working
+            await jsInterop.ClearCanvas($"vncCanvas_{_canvasId}");
+            
+            if (_connection != null)
+            {
+                AttachToConnection();
+            }
+        }
+    }
+
+    private void AttachToConnection()
+    {
+        if (_connection != null && !_disposed)
+        {
+            _connection.RenderTarget = this;
+            _connection.OutputHandler = this;
+            
+            // Subscribe to property changes to handle connection state changes
+            _connection.PropertyChanged += OnConnectionPropertyChanged;
+            
+            // If connection is already established, request a full framebuffer update
+            if (_connection.ConnectionState == ConnectionState.Connected)
+            {
+                RequestFullFramebufferUpdate();
+            }
+            
+            // Force initial rendering
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnConnectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RfbConnection.ConnectionState) && 
+            _connection?.ConnectionState == ConnectionState.Connected)
+        {
+            RequestFullFramebufferUpdate();
+        }
+    }
+
+    private void RequestFullFramebufferUpdate()
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected)
+        {
+            var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
+            var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(false, fullScreenRect);
+            _connection.EnqueueMessage(updateRequest);
+        }
+    }
+
+    private void DetachFromConnection()
+    {
+        if (_connection != null)
+        {
+            try
+            {
+                _connection.PropertyChanged -= OnConnectionPropertyChanged;
+                
+                // Check if connection is still valid before trying to access properties
+                if (ReferenceEquals(_connection.RenderTarget, this))
+                    _connection.RenderTarget = null;
+                if (ReferenceEquals(_connection.OutputHandler, this))
+                    _connection.OutputHandler = null;
+            }
+            catch (ObjectDisposedException)
+            {
+                // Connection was already disposed - this is fine during cleanup
+                // Just ignore since the connection is already cleaned up
+            }
+            catch (Exception ex)
+            {
+                // Log other unexpected errors but don't throw
+                Console.WriteLine($"Warning: Error during connection detachment: {ex.Message}");
+            }
+        }
+    }
+
+    public virtual void RingBell()
+    {
+        // Ring the system bell - in browser context, we might want to use JavaScript
+        Console.WriteLine("VNC Bell");
+    }
+
+    public IFramebufferReference GrabFramebufferReference(Size size, IImmutableSet<Screen> layout)
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(VncView));
+
+        if (!_canvas.HasValue)
+            throw new InvalidOperationException("Canvas element is not initialized.");
+
+        bool sizeChanged = canvasSize != size;
+        if (sizeChanged)
+        {
+        canvasReference.Size = size;
+            InvokeAsync(StateHasChanged);
+        }
+
+        // Initialize persistent framebuffer if needed
+        if (_persistentFramebuffer == null || _framebufferSize != size)
+        {
+            InitializePersistentFramebuffer(size, canvasReference.Format);
+        }
+        
+        return new BlazorFramebufferReference(canvasReference, InvalidateVisual, QueueFramebufferUpdate, _persistentFramebuffer, trackChanges: true);
+    }
+
+    /// <summary>
+    /// Invalidates the visual and queues a repaint.
+    /// </summary>
+    public void InvalidateVisual()
+    {
+        if (!_disposed)
+        {
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void QueueFramebufferUpdate(byte[] data, Size size, PixelFormat format, Rectangle? dirtyRect = null)
+    {
+        if (!_disposed)
+        {
+            // The VNC library has already written directly to our persistent buffer via the IFramebufferReference.Address
+            // The 'data' parameter is actually a reference to our persistent buffer
+            
+            if (dirtyRect.HasValue)
+            {
+                // Add dirty rectangle for optimized rendering
+                lock (_dirtyRectanglesLock)
+                {
+                    _dirtyRectangles.Add(dirtyRect.Value);
+                }
+            }
+            
+            // PERFORMANCE CRITICAL: Immediate rendering for maximum responsiveness
+            InvokeAsync(async () =>
+            {
+                try
+                {
+                    await RenderPersistentFramebuffer();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in immediate render: {ex.Message}");
+                }
+            });
+        }
+    }
+
+
+
+    private void InitializePersistentFramebuffer(Size size, PixelFormat format)
+    {
+        int bufferSize = size.Width * size.Height * (format.BitsPerPixel / 8);
+        _persistentFramebuffer = new byte[bufferSize];
+        _framebufferSize = size;
+        _framebufferFormat = format;
+    }
+
+    private async Task RenderPersistentFramebuffer()
+    {
+        // Check if component is disposed
+        if (_disposed || _persistentFramebuffer == null || _framebufferFormat == null)
+        {
+            return;
+        }
+
+        try
+        {
+            List<Rectangle> rectanglesToRender = null;
+            
+            // Get dirty rectangles to render
+            lock (_dirtyRectanglesLock)
+            {
+                if (_dirtyRectangles.Count > 0)
+                {
+                    rectanglesToRender = new List<Rectangle>(_dirtyRectangles);
+                    _dirtyRectangles.Clear();
+                }
+            }
+            
+            // Double-check we're not disposed before rendering
+            if (_disposed)
+                return;
+            
+            if (rectanglesToRender != null && rectanglesToRender.Count > 0)
+            {
+                // Render only dirty rectangles for better performance
+                await renderingService.RenderDirtyRectanglesAsync($"vncCanvas_{_canvasId}", _persistentFramebuffer, _framebufferSize, _framebufferFormat.Value, rectanglesToRender);
+            }
+            else
+            {
+                // Fallback to full framebuffer rendering
+                await renderingService.RenderFullFramebufferAsync($"vncCanvas_{_canvasId}", _persistentFramebuffer, _framebufferSize, _framebufferFormat.Value);
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component was disposed during rendering - this is normal
+            return;
+        }
+        catch (Exception ex)
+        {
+            // Log only critical errors, not every render
+            Console.WriteLine($"Error rendering persistent framebuffer: {ex.Message}");
+        }
+    }
+
+    public virtual void HandleServerClipboardUpdate(string text)
+    {
+        // In a browser context, we would need to use the Clipboard API
+        // For now, just log it
+        Console.WriteLine($"Clipboard update: {text}");
+    }
+    
+    private async Task DrawTestPattern()
+    {
+        if (_canvas.HasValue && !_disposed)
+        {
+            try
+            {
+                // Create a simple test pattern to verify canvas is working
+                var testData = new byte[800 * 600 * 4]; // RGBA
+                for (int y = 0; y < 600; y++)
+                {
+                    for (int x = 0; x < 800; x++)
+                    {
+                        int index = (y * 800 + x) * 4;
+                        testData[index] = (byte)(x % 256);     // Red
+                        testData[index + 1] = (byte)(y % 256); // Green
+                        testData[index + 2] = 128;             // Blue
+                        testData[index + 3] = 255;             // Alpha
+                    }
+                }
+                
+                await jsInterop.DrawRectangle($"vncCanvas_{_canvasId}", testData, 0, 0, 800, 600);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Test pattern error: {ex.Message}");
+            }
+        }
+    }
+
+    // Input event handlers - PERFORMANCE CRITICAL: Direct inline implementation
+    private async void OnMouseDown(MouseEventArgs e)
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected)
+        {
+            var buttons = GetMouseButtons(e);
+            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+            _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+        }
+    }
+
+    private async void OnMouseUp(MouseEventArgs e)
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected)
+        {
+            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+            _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+        }
+    }
+
+    private async void OnMouseMove(MouseEventArgs e)
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected)
+        {
+            // Important: Track button state during move for text selection and drag operations
+            var buttons = GetMouseButtons(e);
+            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+            _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+        }
+    }
+
+    private async void OnWheel(WheelEventArgs e)
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected)
+        {
+            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+            var button = e.DeltaY > 0 ? MouseButtons.WheelUp : MouseButtons.WheelDown;
+            
+            // Send wheel press and release
+            _connection.EnqueueMessage(new PointerEventMessage(position, button));
+            _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+        }
+    }
+
+    // Keyboard event handlers - delegated to InputService
+    private async void OnKeyDown(KeyboardEventArgs e)
+    {
+        await inputService.HandleKeyDownAsync(e, _connection, ExitFullscreenAsync, _isFullscreen);
+    }
+
+    private async void OnKeyUp(KeyboardEventArgs e)
+    {
+        await inputService.HandleKeyUpAsync(e, _connection, _isFullscreen);
+    }
+
+    // Cached canvas dimensions to avoid repeated JS interop calls
+    private CanvasDimensions? _cachedCanvasDimensions;
+    private DateTime _lastDimensionsUpdate = DateTime.MinValue;
+    private static readonly TimeSpan DimensionsCacheTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Converts canvas coordinates to VNC framebuffer coordinates with intelligent caching
+    /// This method handles responsive scaling and CSS transformations properly
+    /// PERFORMANCE CRITICAL: Kept inline to avoid service overhead during rapid mouse events
+    /// </summary>
+    private async Task<Position> ConvertCanvasToVncCoordinatesAsync(double canvasX, double canvasY)
+    {
+        if (_connection?.RemoteFramebufferSize == null || _connection.RemoteFramebufferSize == Size.Zero)
+        {
+            // Fallback to direct coordinates if no framebuffer size is available
+            return new Position((int)canvasX, (int)canvasY);
+        }
+
+        try
+        {
+            // Use cached dimensions if they're recent (performance optimization)
+            var now = DateTime.UtcNow;
+            if (_cachedCanvasDimensions == null || (now - _lastDimensionsUpdate) > DimensionsCacheTimeout)
+            {
+                _cachedCanvasDimensions = await jsInterop.GetCanvasDimensions($"vncCanvas_{_canvasId}");
+                _lastDimensionsUpdate = now;
+            }
+
+            var actualCanvasWidth = _cachedCanvasDimensions.Width;
+            var actualCanvasHeight = _cachedCanvasDimensions.Height;
+            var vncFramebufferSize = _connection.RemoteFramebufferSize;
+
+            // Calculate scaling factors based on actual rendered canvas size
+            // This handles CSS scaling (max-width, max-height, responsive design)
+            double scaleX = (double)vncFramebufferSize.Width / actualCanvasWidth;
+            double scaleY = (double)vncFramebufferSize.Height / actualCanvasHeight;
+
+            // Convert canvas coordinates to VNC coordinates with proper rounding
+            int vncX = (int)Math.Round(canvasX * scaleX);
+            int vncY = (int)Math.Round(canvasY * scaleY);
+
+            // Clamp coordinates to valid range (critical for edge cases)
+            vncX = Math.Max(0, Math.Min(vncX, vncFramebufferSize.Width - 1));
+            vncY = Math.Max(0, Math.Min(vncY, vncFramebufferSize.Height - 1));
+
+            return new Position(vncX, vncY);
+        }
+        catch (Exception ex)
+        {
+            // Log the error for debugging but don't crash
+            Console.WriteLine($"Warning: Coordinate conversion failed, using fallback: {ex.Message}");
+            
+            // Fallback to simple scaling using initial canvas size
+            var vncFramebufferSize = _connection.RemoteFramebufferSize;
+            var fallbackCanvasSize = canvasSize; // Initial canvas size from component
+
+            double scaleX = (double)vncFramebufferSize.Width / fallbackCanvasSize.Width;
+            double scaleY = (double)vncFramebufferSize.Height / fallbackCanvasSize.Height;
+
+            int vncX = (int)Math.Round(canvasX * scaleX);
+            int vncY = (int)Math.Round(canvasY * scaleY);
+
+            // Clamp to valid range
+            vncX = Math.Max(0, Math.Min(vncX, vncFramebufferSize.Width - 1));
+            vncY = Math.Max(0, Math.Min(vncY, vncFramebufferSize.Height - 1));
+
+            return new Position(vncX, vncY);
+        }
+    }
+
+    /// <summary>
+    /// Converts browser MouseEventArgs.Buttons to VNC MouseButtons enum
+    /// Browser uses bitmask: 1=Left, 2=Right, 4=Middle
+    /// This is critical for proper text selection and drag operations
+    /// </summary>
+    private static MouseButtons GetMouseButtons(MouseEventArgs e)
+    {
+        var buttons = MouseButtons.None;
+
+        // Use bitwise AND operations to check which buttons are pressed
+        // This allows multiple buttons to be pressed simultaneously
+        if ((e.Buttons & 1) == 1) buttons |= MouseButtons.Left;   // Left mouse button
+        if ((e.Buttons & 2) == 2) buttons |= MouseButtons.Right;  // Right mouse button  
+        if ((e.Buttons & 4) == 4) buttons |= MouseButtons.Middle; // Middle mouse button/wheel
+
+        return buttons;
+    }
+
+    // ConvertToKeySymbol method moved to InputService
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+        {
+            DetachFromConnection();
+            lock (_canvasReplacementLock)
+            {
+                canvasReference?.Dispose();
+            }
+        }
+
+        // Clean up fullscreen listener
+        if (_dotNetObjectRef != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await jsInterop.RemoveFullscreenChangeListener();
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            });
+            _dotNetObjectRef.Dispose();
+        }
+
+        _disposed = true;
+    }
+    
+    // Fullscreen functionality - delegated to FullscreenService
+    public async Task EnterFullscreenAsync()
+    {
+        if (!_disposed && _canvas.HasValue)
+        {
+            var containerId = $"vnc-container-{_canvasId}";
+            await fullscreenService.EnterFullscreenAsync(containerId);
+        }
+    }
+    
+    public async Task ExitFullscreenAsync()
+    {
+        if (!_disposed)
+        {
+            await fullscreenService.ExitFullscreenAsync();
+        }
+    }
+    
+    public async Task ToggleFullscreenAsync()
+    {
+        var containerId = $"vnc-container-{_canvasId}";
+        await fullscreenService.ToggleFullscreenAsync(containerId);
+    }
+    
+    [JSInvokable]
+    public async Task OnFullscreenChanged(bool isFullscreen)
+    {
+        _isFullscreen = isFullscreen;
+        
+        // Invalidate canvas dimensions cache when fullscreen state changes
+        // because the canvas size will change dramatically
+        _cachedCanvasDimensions = null;
+        
+        await OnFullscreenChange.InvokeAsync(isFullscreen);
+        StateHasChanged();
+    }
+}
