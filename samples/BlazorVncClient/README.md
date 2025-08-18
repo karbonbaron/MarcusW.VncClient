@@ -34,6 +34,8 @@ This is a sample Blazor application that demonstrates how to use the MarcusW.Vnc
 
 ## How to Use
 
+### Manual Connection
+
 1. **Connection Setup:**
    - Enter the VNC server host (IP address or hostname)
    - Enter the VNC server port (default is 5900)
@@ -41,16 +43,60 @@ This is a sample Blazor application that demonstrates how to use the MarcusW.Vnc
 
 2. **Connect:**
    - Click the "Connect" button
-   - **Automatic Authentication**: The app automatically detects the server's security type and prompts accordingly:
-     - **VNC Auth**: Shows password-only dialog
-     - **VeNCrypt**: Shows username + password dialog
-     - **Pre-filled**: Uses form values if provided
+
+### URL-Based Connection
+
+You can also connect automatically using URL parameters:
+
+**Query String Parameters:**
+```
+/vnc_view?host=192.168.1.100&port=5900&user=admin&password=secret&autoconnect=true
+```
+
+**Route Parameters:**
+```
+/vnc_view/192.168.1.100/5900
+```
+
+**Available Parameters:**
+- `host` - VNC server hostname or IP address
+- `port` - VNC server port number (default: 5900)
+- `user` - Username for VeNCrypt authentication (optional)
+- `password` - Password for VNC/VeNCrypt authentication (optional)
+- `autoconnect` - Automatically connect when page loads (true/false)
+
+**Examples:**
+```
+# Connect with full authentication (VeNCrypt)
+https://localhost:5001/vnc_view?host=10.0.0.100&port=5901&user=admin&password=secret&autoconnect=true
+
+# Connect with password only (VNC Authentication)
+https://localhost:5001/vnc_view?host=server.local&port=5900&password=mypassword&autoconnect=true
+
+# Pre-fill connection form without auto-connecting
+https://localhost:5001/vnc_view?host=server.local&port=5900
+
+# Using route parameters (authentication will prompt)
+https://localhost:5001/vnc_view/192.168.1.50/5900
+
+# Complete automation with credentials
+https://localhost:5001/vnc_view?host=192.168.1.100&port=5900&user=vnc&password=password123&autoconnect=true
+```
+
+### Authentication Process
+
+3. **Authentication:**
+   - **Automatic Authentication**: The app automatically detects the server's security type and handles accordingly:
+     - **With URL Parameters**: Uses provided `user` and `password` parameters automatically (no dialogs)
+     - **Without Parameters**: Shows appropriate authentication dialog:
+       - **VNC Auth**: Shows password-only dialog
+       - **VeNCrypt**: Shows username + password dialog
    - **Authentication Dialog Features**:
      - Security type identification in dialog
      - Enter key to confirm, Escape to cancel
      - Professional modal design
 
-3. **Interact:**
+4. **Interact:**
    - Once connected, you can interact with the remote desktop using mouse and keyboard
    - The connection information panel shows:
      - Connection status and protocol version

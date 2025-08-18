@@ -1,8 +1,11 @@
 @page "/vnc_view"
+@page "/vnc_view/{host?}"
+@page "/vnc_view/{host?}/{port:int?}"
 @rendermode InteractiveServer
 
 @inject MainWindowViewModel _viewModel
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 @using BlazorVncClient.ViewModels
 @using MarcusW.VncClient.Blazor
@@ -28,13 +31,13 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label for="hostInput" class="form-label">VNC Server Host</label>
-                                <input type="text" class="form-control" id="hostInput" @bind="_host" placeholder="Enter VNC server host" />
+                                <input type="text" class="form-control" id="hostInput" @bind="CurrentHost" placeholder="Enter VNC server host" />
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label for="portInput" class="form-label">Port</label>
-                                <input type="number" class="form-control" id="portInput" @bind="_port" placeholder="5900" />
+                                <input type="number" class="form-control" id="portInput" @bind="CurrentPort" placeholder="5900" />
                             </div>
                         </div>
                         <div class="col-md-5">
@@ -185,10 +188,32 @@
                      OnCredentialsResult="OnCredentialsAuthResult" />
 
 @code {
-    private string? _host = "10.203.152.154";
-    private int _port = 5900;
+    [Parameter] public string? Host { get; set; }
+    [Parameter] public int? Port { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "host")] public string? QueryHost { get; set; }
+    [SupplyParameterFromQuery(Name = "port")] public int? QueryPort { get; set; }
+    [SupplyParameterFromQuery(Name = "user")] public string? User { get; set; }
+    [SupplyParameterFromQuery(Name = "password")] public string? Password { get; set; }
+    [SupplyParameterFromQuery(Name = "autoconnect")] public bool? AutoConnect { get; set; }
+    
+    // Consolidated connection parameters with proper binding support
+    private string? _currentHost;
+    private int _currentPort;
+    
+    private string? CurrentHost
+    {
+        get => _currentHost ?? QueryHost ?? "raspberrypi.local";
+        set => _currentHost = value;
+    }
+
+    private int CurrentPort
+    {
+        get => _currentPort != 0 ? _currentPort : (QueryPort ?? 5900);
+        set => _currentPort = value;
+    }
     private bool _isConnecting = false;
-    private bool _parametersValid => !string.IsNullOrWhiteSpace(_host) && _port > 0 && _port <= 65535;
+    private bool _parametersValid => !string.IsNullOrWhiteSpace(CurrentHost) && CurrentPort > 0 && CurrentPort <= 65535;
     private VncView? _vncView;
     private bool _isFullscreen = false;
 
@@ -204,27 +229,71 @@
 
     protected override async Task OnInitializedAsync()
     {
-                // Set up authentication handlers with modal dialogs
+        // Set up authentication handlers with modal dialogs
         _viewModel.InteractiveAuthenticationHandler.EnterPasswordInteraction.RegisterHandler(async context =>
         {
             var request = context.Input;
             
-            // Always show modal dialog for password input
-            var response = await ShowPasswordDialog(request);
-            context.SetOutput(response);
+            // Use provided password if available, otherwise show modal dialog
+            if (!string.IsNullOrWhiteSpace(Password))
+            {
+                var response = new PasswordPromptResponse 
+                { 
+                    Password = Password, 
+                    IsCancelled = false 
+                };
+                context.SetOutput(response);
+            }
+            else
+            {
+                var response = await ShowPasswordDialog(request);
+                context.SetOutput(response);
+            }
         });
         
             _viewModel.InteractiveAuthenticationHandler.EnterCredentialsInteraction.RegisterHandler(async context =>
                 {
             var request = context.Input;
             
-            // Always show modal dialog for credentials input
-            var response = await ShowCredentialsDialog(request);
-            context.SetOutput(response);
+            // Use provided credentials if available, otherwise show modal dialog
+            if (!string.IsNullOrWhiteSpace(Password) && !string.IsNullOrWhiteSpace(User))
+            {
+                var response = new CredentialsPromptResponse 
+                { 
+                    Username = User, 
+                    Password = Password, 
+                    IsCancelled = false 
+                };
+                context.SetOutput(response);
+            }
+            else if (!string.IsNullOrWhiteSpace(Password))
+            {
+                // Only password provided, use empty username for VNC auth
+                var response = new CredentialsPromptResponse 
+                { 
+                    Username = "", 
+                    Password = Password, 
+                    IsCancelled = false 
+                };
+                context.SetOutput(response);
+            }
+            else
+            {
+                var response = await ShowCredentialsDialog(request);
+                context.SetOutput(response);
+            }
         });
 
         // Subscribe to property changes for UI updates
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        
+        // Auto-connect if specified and parameters are valid
+        if (AutoConnect == true && _parametersValid)
+        {
+            // Small delay to ensure UI is rendered before connecting
+            await Task.Delay(100);
+            await Connect();
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -288,8 +357,8 @@
 
         try
         {
-            _viewModel.Host = _host!;
-        _viewModel.Port = _port;
+            _viewModel.Host = CurrentHost!;
+            _viewModel.Port = CurrentPort;
             
             _viewModel.ConnectCommand.Execute().Subscribe();
         }

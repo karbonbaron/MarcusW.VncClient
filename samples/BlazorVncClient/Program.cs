@@ -64,11 +64,11 @@ builder.Services.AddRazorComponents()
 // Add VNC client services
 builder.Services.AddVncClientServices(options =>
 {
-    options.EnableDirtyRectangleRendering = true;
-    options.MaxDirtyRectangles = 50;
-    options.EnableFramebufferCaching = true;
-    options.DefaultCanvasSize = new Size(800, 600);
-    options.DefaultDpi = 96.0;
+    //options.EnableDirtyRectangleRendering = true;
+    //options.MaxDirtyRectangles = 50;
+    //options.EnableFramebufferCaching = true;
+    //options.DefaultCanvasSize = new Size(800, 600);
+    //options.DefaultDpi = 96.0;
 });
 
 // Add application-specific services
