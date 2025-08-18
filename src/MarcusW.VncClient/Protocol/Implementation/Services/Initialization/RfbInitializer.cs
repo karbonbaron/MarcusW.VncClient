@@ -81,10 +81,16 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Initialization
             ReadOnlyMemory<byte> headerBytes = await transport.Stream.ReadAllAsync(24, cancellationToken).ConfigureAwait(false);
             Size framebufferSize;
             PixelFormat pixelFormat;
-            if (transport.Stream is SslStream)
+            
+            // Check if VeNCrypt security type was used (which requires 3 bytes padding)
+            // Only VeNCrypt requires this padding, not other SSL-based security types like TLS or SecureTunnel
+            bool isVeNCryptAuth = _context.State is Protocol.Implementation.ProtocolState protocolState && 
+                                  protocolState.UsedSecurityType?.Id == (byte)Protocol.SecurityTypes.WellKnownSecurityType.VeNCrypt;
+            
+            if (isVeNCryptAuth)
             {
                 // 3 bytes padding as per https://vncdotool.readthedocs.io/en/0.8.0/rfbproto.html#setpixelformat
-                // do not want to break original code so only based on SslStream used in VeNCrypt scurity type based decision
+                // This padding is specific to VeNCrypt authentication
                 framebufferSize = GetFramebufferSize(headerBytes.Span[3..7]);
                 pixelFormat = GetPixelFormat(headerBytes.Span[7..20]);
             }
