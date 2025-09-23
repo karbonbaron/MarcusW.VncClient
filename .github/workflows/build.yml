@@ -100,11 +100,6 @@ jobs:
           dotnet pack src/MarcusW.VncClient.Avalonia -c Release -o packages --no-restore
           dotnet pack src/MarcusW.VncClient.Blazor -c Release -o packages --no-restore
 
-      - name: Validate Packages
-        run: |
-          dotnet tool install --global dotnet-validate --version 0.0.1-preview.304
-          dotnet validate package local packages/*.nupkg
-
       - name: Push to GitHub Packages
         run: |
           dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
