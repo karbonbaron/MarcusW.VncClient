@@ -29,4 +29,6 @@
     <None Include="vnc-client-blazor-icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 
+  <!-- wwwroot files are automatically included as static web assets by .NET SDK -->
+
 </Project>
