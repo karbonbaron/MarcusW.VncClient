@@ -25,6 +25,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
         private readonly StateValue<Size> _remoteFramebufferSizeValue = new StateValue<Size>(Size.Zero);
         private readonly StateValue<PixelFormat> _remoteFramebufferFormatValue = new StateValue<PixelFormat>(PixelFormat.Unknown);
         private readonly StateValue<IImmutableSet<Screen>> _remoteFramebufferLayoutValue = new StateValue<IImmutableSet<Screen>>(ImmutableHashSet<Screen>.Empty);
+        private readonly StateValue<ColorMap> _remoteFramebufferColorMapValue = new StateValue<ColorMap>(ColorMap.Empty);
 
         private readonly StateValue<string?> _desktopNameValue = new StateValue<string?>(null);
 
@@ -126,6 +127,15 @@ namespace MarcusW.VncClient.Protocol.Implementation
         }
 
         /// <summary>
+        /// Gets or sets the current remote framebuffer color map for indexed color formats.
+        /// </summary>
+        public ColorMap RemoteFramebufferColorMap
+        {
+            get => _remoteFramebufferColorMapValue.Value;
+            set => _remoteFramebufferColorMapValue.Value = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
+        /// <summary>
         /// Gets or sets the current desktop name.
         /// </summary>
         public string? DesktopName
@@ -195,7 +205,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
         /// <inheritdoc />
         public virtual void Prepare()
         {
-            _logger.LogDebug("Initializing sets for used message and encoding types...");
+            // Removed debug logging for production use
 
             // Initialize UsedMessageTypes with all standard messages that need to be supported by the server by definition
             Debug.Assert(_context.SupportedMessageTypes != null, "_context.SupportedMessageTypes != null");
@@ -238,7 +248,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
             IImmutableSet<IMessageType> usedMessageTypes = UsedMessageTypes;
             if (!usedMessageTypes.Contains(messageType))
             {
-                _logger.LogDebug("Marking message type {messageType} as used...", messageType.Name);
+                // Removed message type usage debug logging for production use
                 UsedMessageTypes = usedMessageTypes.Add(messageType);
             }
         }
@@ -275,7 +285,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
             IImmutableSet<IEncodingType> usedEncodingTypes = UsedEncodingTypes;
             if (!usedEncodingTypes.Contains(encodingType))
             {
-                _logger.LogDebug("Marking encoding type {encodingType} as used...", encodingType.Name);
+                // Removed encoding type usage debug logging for production use
                 UsedEncodingTypes = usedEncodingTypes.Add(encodingType);
             }
         }

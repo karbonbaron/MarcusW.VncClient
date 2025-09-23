@@ -196,9 +196,25 @@
     {
         if (_connection?.ConnectionState == ConnectionState.Connected)
         {
-            var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
-            var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(false, fullScreenRect);
-            _connection.EnqueueMessage(updateRequest);
+            // WAYVNC COMPATIBILITY: Add delay to prevent flooding server with immediate UI requests
+            // The Blazor component was sending immediate full requests that overwhelm WayVNC
+            Task.Delay(700).ContinueWith(_ =>
+            {
+                try
+                {
+                    if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed)
+                    {
+                        var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
+                        // Use incremental request to be less demanding on the server
+                        var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(true, fullScreenRect);
+                        _connection.EnqueueMessage(updateRequest);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to request framebuffer update: {ex.Message}");
+                }
+            }, TaskScheduler.Default);
         }
     }
 

@@ -165,6 +165,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
             yield return new EndOfContinuousUpdatesMessageType(context);
 
             // Outgoing
+            yield return new SetPixelFormatMessageType();
             yield return new SetEncodingsMessageType();
             yield return new FramebufferUpdateRequestMessageType();
             yield return new ClientFenceMessageType();

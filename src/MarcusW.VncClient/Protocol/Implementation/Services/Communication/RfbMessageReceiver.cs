@@ -41,14 +41,14 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
         /// <inheritdoc />
         public void StartReceiveLoop()
         {
-            _logger.LogDebug("Starting receive loop...");
+            // Removed debug logging for production use
             Start();
         }
 
         /// <inheritdoc />
         public Task StopReceiveLoopAsync()
         {
-            _logger.LogDebug("Stopping receive loop...");
+            // Removed debug logging for production use
             return StopAndWaitAsync();
         }
 
@@ -60,26 +60,44 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
             Debug.Assert(_context.Transport != null, "_context.Transport != null");
             ITransport transport = _context.Transport;
             Stream transportStream = transport.Stream;
+            
+            // Removed debug logging for production use
 
             // Build a dictionary for faster lookup of incoming message types
             ImmutableDictionary<byte, IIncomingMessageType> incomingMessageLookup =
                 _context.SupportedMessageTypes.OfType<IIncomingMessageType>().ToImmutableDictionary(mt => mt.Id);
 
             Span<byte> messageTypeBuffer = stackalloc byte[1];
+            int messageCount = 0;
 
             while (!cancellationToken.IsCancellationRequested)
             {
+                ++messageCount;
+                
                 // Read message type
-                if (transportStream.Read(messageTypeBuffer) == 0)
+                int bytesRead = transportStream.Read(messageTypeBuffer);
+                
+                if (bytesRead == 0)
+                {
+                    // Stream ended - server closed connection
                     throw new UnexpectedEndOfStreamException("Stream reached its end while reading next message type.");
+                }
                 byte messageTypeId = messageTypeBuffer[0];
 
                 // Find message type
                 if (!incomingMessageLookup.TryGetValue(messageTypeId, out IIncomingMessageType messageType))
-                    throw new UnexpectedDataException($"Server sent a message of type {messageTypeId} that is not supported by this protocol implementation. "
-                        + "Servers should always check for client support before using protocol extensions.");
+                {
+                    _logger.LogWarning("Server sent unsupported message type {MessageTypeId}. This is likely a protocol extension that this client doesn't support. " +
+                        "The connection will be closed gracefully to avoid protocol desynchronization.", messageTypeId);
+                    
+                    // We can't safely skip unknown message types since we don't know their length
+                    // Continuing could cause protocol stream desynchronization
+                    // The best approach is to gracefully terminate the receive loop
+                    // This will trigger a reconnection attempt if auto-reconnect is enabled
+                    return;
+                }
 
-                _logger.LogDebug("Received message: {name}({id})", messageType.Name, messageTypeId);
+                // Removed verbose per-message debug logging for production use
 
                 // Ensure the message type is marked as used
                 if (!messageType.IsStandardMessageType)

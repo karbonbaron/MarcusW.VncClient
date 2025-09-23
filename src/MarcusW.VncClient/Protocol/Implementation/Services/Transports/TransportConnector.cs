@@ -42,7 +42,7 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Transports
 
         private async Task<TcpTransport> ConnectTcpTransportAsync(TcpTransportParameters parameters, CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Connecting to TCP endpoint {endpoint}...", parameters);
+            // Removed debug logging for production use
 
             // Create a cancellation token source that cancels on timeout or manual cancel
             using var timeoutCts = new CancellationTokenSource(_connectParameters.ConnectTimeout);

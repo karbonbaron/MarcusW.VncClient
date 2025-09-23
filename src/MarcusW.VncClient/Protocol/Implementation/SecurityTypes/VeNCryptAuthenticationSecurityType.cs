@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
 {
@@ -37,7 +38,7 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             byte[] serverVersion = await ReadExactAsync(stream, 2, cancellationToken).ConfigureAwait(false);
             byte serverMajor = serverVersion[0];
             byte serverMinor = serverVersion[1];
-            Console.WriteLine($"Server VeNCrypt version: {serverMajor}.{serverMinor}");
+            // Removed VeNCrypt server version debug logging for production use
 
             // Step 2: Choose client version (max supported 0.2)
             byte clientMajor = 0;
@@ -119,6 +120,13 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 if (acceptFlag != 0x01)
                     throw new InvalidOperationException("Server rejected chosen VeNCrypt subtype");
 
+                // Log the chosen subtype for debugging
+                var logger = _context.Connection.LoggerFactory.CreateLogger(typeof(VeNCryptAuthenticationSecurityType));
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    // VeNCrypt subtype selection debug logging removed for production
+                }
+                
                 // Continue with chosen subtype
                 return await HandleSubtype0_2Async(chosenSubtype, handler, stream, cancellationToken).ConfigureAwait(false);
             }
@@ -146,6 +154,21 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 if (subtypes.Contains(p))
                     return p;
             return 0;
+        }
+        
+        private string GetSubtypeMeaning(uint subtype)
+        {
+            return subtype switch
+            {
+                256 => "Plain (no encryption)",
+                257 => "TLSNone (TLS, no auth)",
+                258 => "TLSVnc (TLS + VNC auth)",
+                259 => "TLSPlain (TLS + plain auth)",
+                260 => "X509None (X509, no auth)",
+                261 => "X509Vnc (X509 + VNC auth)",
+                262 => "X509Plain (X509 + plain auth)",
+                _ => $"Unknown subtype {subtype}"
+            };
         }
 
         private async Task<AuthenticationResult> HandleSubtype0_1Async(byte subtype, IAuthenticationHandler handler, Stream stream, CancellationToken cancellationToken)
@@ -201,7 +224,7 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 userCertificateValidationCallback: (sender, cert, chain, errors) => true);
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                TargetHost = "wayvnc.local",
+                TargetHost = GetTargetHostName(),
                 EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
             }, cancellationToken).ConfigureAwait(false);
@@ -224,7 +247,7 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 //certs.Add(new X509Certificate2("c:\\temp\\client.pfx", "")); // example, replace!
 
                 await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                    TargetHost = "wayvnc.local",
+                    TargetHost = GetTargetHostName(),
                     ClientCertificates = null, //certs,
                     EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
@@ -247,6 +270,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
 
             var usernameBytes = Encoding.ASCII.GetBytes(input.Username);
             var passwordBytes = Encoding.ASCII.GetBytes(input.Password);
+            
+            var logger = _context.Connection.LoggerFactory.CreateLogger(typeof(VeNCryptAuthenticationSecurityType));
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                // VeNCrypt credentials debug logging removed for production
+            }
 
             using var ms = new MemoryStream();
 
@@ -261,22 +290,99 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             ms.Write(passwordBytes, 0, passwordBytes.Length);
 
             byte[] payload = ms.ToArray();
+            
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                // VeNCrypt payload debug logging removed for production
+            }
 
             await stream.WriteAsync(payload, 0, payload.Length, cancellationToken).ConfigureAwait(false);
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
             // Read 1-byte authentication result
             byte[] resultBuf = await ReadExactAsync(stream, 1, cancellationToken).ConfigureAwait(false);
+            
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                // VeNCrypt authentication result debug logging removed for production
+            }
 
-            ITransport transport = new SSLTransport(stream);
             if (resultBuf[0] == 0)
+            {
+                // Authentication succeeded
+                logger.LogInformation("VeNCrypt authentication completed successfully - creating SSL transport");
+                ITransport transport = new SSLTransport(stream);
                 return new AuthenticationResult(transport, false);
+            }
             else
+            {
+                // Authentication failed - server may send additional error data
+                logger.LogError("VeNCrypt authentication failed with result code: {ResultCode}", resultBuf[0]);
+                
+                // Based on the hex dump analysis, the server is sending error data after the failure code
+                // Try to read and clear any remaining error data to prevent it from corrupting subsequent reads
+                try
+                {
+                    // Peek ahead to see if there's more data (like an error message)
+                    // The format appears to be: 3 more bytes + 4-byte length + message
+                    
+                    // Try to read what appears to be additional error response data
+                    byte[] additionalBytes = new byte[7]; // Try to read next 7 bytes to see the pattern
+                    int bytesRead = 0;
+                    int totalToRead = 7;
+                    
+                    while (bytesRead < totalToRead)
+                    {
+                        int currentRead = await stream.ReadAsync(additionalBytes, bytesRead, totalToRead - bytesRead, cancellationToken).ConfigureAwait(false);
+                        if (currentRead == 0) break; // No more data
+                        bytesRead += currentRead;
+                    }
+                    
+                    if (bytesRead >= 7)
+                    {
+                        logger.LogDebug("Additional error data: {ErrorData}", Convert.ToHexString(additionalBytes[0..bytesRead]));
+                        
+                        // Try to parse as: 3 bytes + 4-byte length
+                        uint errorLength = (uint)IPAddress.NetworkToHostOrder(BitConverter.ToInt32(additionalBytes, 3));
+                        logger.LogDebug("Potential error message length: {Length}", errorLength);
+                        
+                        if (errorLength > 0 && errorLength < 1024) // Reasonable error message length
+                        {
+                            byte[] errorBytes = await ReadExactAsync(stream, (int)errorLength, cancellationToken).ConfigureAwait(false);
+                            string errorMessage = Encoding.UTF8.GetString(errorBytes).Trim();
+                            
+                            logger.LogError("VeNCrypt server error message: '{ErrorMessage}'", errorMessage);
+                            throw new InvalidOperationException($"VeNCrypt authentication failed: {errorMessage}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to read VeNCrypt error details - this may cause protocol parsing issues");
+                }
+                
                 throw new InvalidOperationException("VeNCrypt Plain authentication failed.");
+            }
         }
 
 
         public Task ReadServerInitExtensionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        /// <summary>
+        /// Gets the target hostname for TLS certificate validation.
+        /// </summary>
+        /// <returns>The hostname to use for TLS validation.</returns>
+        private string GetTargetHostName()
+        {
+            // Try to get hostname from TCP transport parameters
+            if (_context.Connection.Parameters.TransportParameters is TcpTransportParameters tcpParams)
+            {
+                return tcpParams.Host;
+            }
+
+            // Fallback to generic hostname
+            return "vnc-server";
+        }
 
         private async Task<byte[]> ReadExactAsync(Stream stream, int length, CancellationToken cancellationToken)
         {

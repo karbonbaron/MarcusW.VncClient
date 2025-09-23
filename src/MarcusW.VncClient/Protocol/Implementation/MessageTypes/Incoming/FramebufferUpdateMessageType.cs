@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using MarcusW.VncClient.Protocol.EncodingTypes;
 using MarcusW.VncClient.Protocol.Implementation.EncodingTypes.Pseudo;
 using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Outgoing;
@@ -92,12 +93,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
                 if (numberOfRectangles == 0)
                     return;
 
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug("Receiving framebuffer update with {rectangles} rectangles. Current framebuffer size: {framebufferSize}",
-                        numberOfRectangles == 65535 ? "a dynamic amount of" : numberOfRectangles.ToString(CultureInfo.CurrentCulture), _state.RemoteFramebufferSize);
-                    _stopwatch.Restart();
-                }
+                // Removed framebuffer update reception debug logging for production use
+                _stopwatch?.Restart();
 
                 // Get the current render target (can be null)
                 IRenderTarget? renderTarget = _context.Connection.RenderTarget;
@@ -186,12 +183,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
                     targetFramebuffer?.Dispose();
                 }
 
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _stopwatch.Stop();
-                    _logger.LogDebug("Received and rendered/processed {rectangles} rectangles in {milliseconds}ms. Please note that debug builds are way less optimized.",
-                        rectanglesRead, _stopwatch.ElapsedMilliseconds);
-                }
+                // Removed verbose rectangle processing debug logging for production use
+                _stopwatch?.Stop();
             }
 
 
@@ -234,8 +227,23 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
                 return;
             }
 
-            // Request next incremental update
-            _context.MessageSender.EnqueueMessage(new FramebufferUpdateRequestMessage(true, wholeScreenRectangle));
+            // WAYVNC COMPATIBILITY: Add delay before requesting next update to prevent flooding
+            // WayVNC gets overwhelmed by continuous rapid requests and disconnects the client
+            Task.Delay(500).ContinueWith(_ =>
+            {
+                try
+                {
+                    if (_context.MessageSender != null)
+                    {
+                        // Request next incremental update
+                        _context.MessageSender.EnqueueMessage(new FramebufferUpdateRequestMessage(true, wholeScreenRectangle));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to enqueue delayed framebuffer update request");
+                }
+            }, TaskScheduler.Default);
         }
 
         private void VisualizeRectangle(IFramebufferReference targetFramebuffer, in Rectangle rectangle, Color color)
@@ -246,7 +254,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
             if (rectangle.Size.Width < 2 * borderThickness || rectangle.Size.Height < 2 * borderThickness)
                 return;
 
-            var framebufferCursor = new FramebufferCursor(targetFramebuffer, rectangle);
+            var framebufferCursor = new FramebufferCursor(targetFramebuffer, rectangle, 
+                _state.RemoteFramebufferFormat.TrueColor ? null : _state.RemoteFramebufferColorMap);
 
             // Rendering order:
             // 0 1 2 3 - top line

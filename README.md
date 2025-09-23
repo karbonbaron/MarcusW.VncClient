@@ -32,7 +32,7 @@ Source Code: [AvaloniaVncClient](samples/AvaloniaVncClient)
 - Highly configurable and extensible structure
 - Flexible transport layer selection (TCP by default)
 - Automatic reconnects with configurable behaviour
-- Supported security types: `None`, `VNC Authentication`
+- Supported security types: `None`, `VNC Authentication`, `RA2`, `RA2ne`, `Tight`, `Ultra`, `TLS`, `VeNCrypt`, `SASL`, `MD5`, `XVP`, `SecureTunnel`, `IntegratedSSH`
 - Supported message types: `SetEncodings`, `FramebufferUpdateRequest`, `FramebufferUpdate`, `ServerCutText`, `SetDesktopSize`, `ServerFence`, `ClientFence`, `EnableContinuousUpdates`, `EndOfContinuousUpdates`, `PointerEvent`, `KeyEvent`, `Bell`
 - Supported frame encoding types: `Raw`, `CopyRect`, `zLib`, `ZRLE`, `Tight`
 - Supported pseudo encoding types: `Fence`, `ContinuousUpdates`, `LastRect`, `JPEG Quality Level`, `JPEG Fine-Grained Quality Level`, `JPEG Subsampling Level`, `DesktopSize`, `ExtendedDesktopSize`
@@ -49,6 +49,18 @@ Source Code: [AvaloniaVncClient](samples/AvaloniaVncClient)
 - Very detailed log output for debugging/analytic purposes
 
 Most of these features are demonstrated by the included sample applications.
+
+## Troubleshooting Connection Issues
+
+If you're experiencing connection issues with newer VNC servers, try these steps:
+
+1. **Enable Debug Logging**: Set the log level to `Debug` to see detailed protocol negotiation information
+2. **Check Protocol Version**: Verify that the server supports RFB 3.8 or earlier (this client supports 3.3, 3.7, 3.8, 3.9)
+3. **Security Type Mismatch**: Ensure the server offers compatible security types (see supported list above)
+4. **VeNCrypt Issues**: For VeNCrypt authentication, ensure proper TLS certificate configuration
+5. **Network/Firewall**: Verify that the VNC port (default 5900) is accessible
+
+For detailed debugging, check the connection logs which include protocol version negotiation and security type selection details.
 
 ### NuGet-Packages
 

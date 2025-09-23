@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MarcusW.VncClient.Protocol.EncodingTypes;
 using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Outgoing;
 using MarcusW.VncClient.Protocol.MessageTypes;
 using MarcusW.VncClient.Protocol.Services;
@@ -42,28 +45,121 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
         /// <inheritdoc />
         public void StartSendLoop()
         {
-            _logger.LogDebug("Starting send loop...");
+            // Removed debug logging for production use
             Start();
         }
 
         /// <inheritdoc />
         public Task StopSendLoopAsync()
         {
-            _logger.LogDebug("Stopping send loop...");
+            // Removed debug logging for production use
             return StopAndWaitAsync();
         }
 
         /// <inheritdoc />
         public void EnqueueInitialMessages(CancellationToken cancellationToken = default)
         {
-            _logger.LogDebug("Enqueuing initial messages...");
+            // Removed initial message enqueueing debug logging for production use
+
+            // WAYVNC COMPATIBILITY: Use TIER 1-4 encoding set for maximum compatibility
+            var minimalEncodingTypes = GetMinimalEncodingTypes();
+            var encodingTypesToUse = minimalEncodingTypes.ToImmutableHashSet();
+            
+            // Removed debug logging for production use
+
+            // Send SetPixelFormat first for maximum compatibility
+            var setPixelFormatMessage = new Protocol.Implementation.MessageTypes.Outgoing.SetPixelFormatMessage(_state.RemoteFramebufferFormat);
+            EnqueueMessage(setPixelFormatMessage, cancellationToken);
 
             // Send initial SetEncodings
-            Debug.Assert(_context.SupportedEncodingTypes != null, "_context.SupportedEncodingTypes != null");
-            EnqueueMessage(new SetEncodingsMessage(_context.SupportedEncodingTypes), cancellationToken);
+            var setEncodingsMessage = new SetEncodingsMessage(encodingTypesToUse);
+            EnqueueMessage(setEncodingsMessage, cancellationToken);
 
-            // Request full framebuffer update
-            EnqueueMessage(new FramebufferUpdateRequestMessage(false, new Rectangle(Position.Origin, _state.RemoteFramebufferSize)), cancellationToken);
+            // Send incremental framebuffer update request for compatibility
+            var updateRect = new Rectangle(Position.Origin, _state.RemoteFramebufferSize);
+            var framebufferRequest = new FramebufferUpdateRequestMessage(true, updateRect); 
+            EnqueueMessage(framebufferRequest, cancellationToken);
+            
+            // Brief delay to prevent server flooding
+            Thread.Sleep(200);
+            
+            // Removed debug logging for production use
+        }
+        
+        /// <summary>
+        /// Gets encoding types for optimal WayVNC compatibility (TIER 1-4 default, configurable TIER 5)
+        /// </summary>
+        private IEnumerable<IEncodingType> GetMinimalEncodingTypes()
+        {
+            // TODO: Add configuration option to enable TIER 5 features for known compatible servers
+            const bool enableAdvancedFeatures = false; // Could be configurable in the future
+            
+            return BuildEncodingTypeSet(includeTier5: enableAdvancedFeatures);
+        }
+
+
+        /// <summary>
+        /// Builds an optimized set of encoding types based on tier configuration
+        /// </summary>
+        private IEnumerable<IEncodingType> BuildEncodingTypeSet(bool includeTier5 = false)
+        {
+            var encodingTypes = new List<IEncodingType>();
+            
+            // TIER 1: Essential encodings (required for basic VNC operation)
+            AddEncodingIfExists(encodingTypes, "Raw");        // Required by VNC spec
+            AddEncodingIfExists(encodingTypes, "CopyRect");   // Basic, widely supported
+            AddEncodingIfExists(encodingTypes, "DesktopSize"); // Critical for framebuffer handling
+            
+            // TIER 2: Common frame encodings (safe compression)
+            AddEncodingIfExists(encodingTypes, "ZRLE");       // Efficient compression
+            AddEncodingIfExists(encodingTypes, "LastRect");   // End-of-update marker
+            
+            // TIER 3: Advanced frame encodings
+            AddEncodingIfExists(encodingTypes, "ZLib");       // Basic compression
+            AddEncodingIfExists(encodingTypes, "Tight");      // Advanced (if TurboJPEG available)
+            
+            // TIER 4: Quality control pseudo encodings
+            AddJpegQualityEncodingsIfExists(encodingTypes);   // Smart JPEG quality control
+            
+            // TIER 5: Advanced protocol extensions (optional, may cause issues with newer servers)
+            if (includeTier5)
+            {
+                AddEncodingIfExists(encodingTypes, "Fence");              // Advanced synchronization
+                AddEncodingIfExists(encodingTypes, "ContinuousUpdates");  // Real-time streaming
+                AddEncodingIfExists(encodingTypes, "ExtendedDesktopSize"); // Multi-screen support
+            }
+            
+            // Removed debug logging for production use
+            
+            return encodingTypes;
+        }
+        
+        /// <summary>
+        /// Helper method to safely add encoding types by name
+        /// </summary>
+        private void AddEncodingIfExists(List<IEncodingType> encodingTypes, string name)
+        {
+            var encodingType = _context.SupportedEncodingTypes?.FirstOrDefault(et => et.Name == name);
+            if (encodingType != null)
+            {
+                encodingTypes.Add(encodingType);
+            }
+        }
+        
+        /// <summary>
+        /// Adds JPEG quality control pseudo encodings for advanced image optimization
+        /// </summary>
+        private void AddJpegQualityEncodingsIfExists(List<IEncodingType> encodingTypes)
+        {
+            if (_context.SupportedEncodingTypes == null) return;
+            
+            var jpegEncodings = _context.SupportedEncodingTypes
+                .Where(et => et.Name.StartsWith("JPEG Quality Level", StringComparison.Ordinal) || 
+                            et.Name.StartsWith("JPEG Fine-Grained Quality Level", StringComparison.Ordinal) || 
+                            et.Name.StartsWith("JPEG Subsampling Level", StringComparison.Ordinal))
+                .ToList();
+                
+            encodingTypes.AddRange(jpegEncodings);
         }
 
         /// <inheritdoc />
@@ -128,17 +224,20 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                     IOutgoingMessage<IOutgoingMessageType> message = queueItem.Message;
                     IOutgoingMessageType messageType = queueItem.MessageType;
 
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        string? parametersOverview = message.GetParametersOverview();
-                        _logger.LogDebug("Sending {messageName} message ({parameters})...", messageType.Name, parametersOverview ?? "no parameters");
-                    }
+                  // Removed verbose per-message debug logging for production use
 
                     try
                     {
                         // Write message to transport stream
                         messageType.WriteToTransport(message, transport, cancellationToken);
+                      
                         queueItem.CompletionSource?.SetResult(null);
+                      
+                      // Add small delay between critical messages to prevent overwhelming the server
+                      if (messageType.Name == "SetEncodings" || messageType.Name == "FramebufferUpdateRequest")
+                      {
+                          Thread.Sleep(100);
+                      }
                     }
                     catch (Exception ex)
                     {

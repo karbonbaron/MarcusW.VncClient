@@ -68,7 +68,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.EncodingTypes.Frame
 
             // Create a cursor for the target framebuffer, if any framebuffer reference is available
             bool hasTargetFramebuffer = targetFramebuffer != null;
-            FramebufferCursor framebufferCursor = hasTargetFramebuffer ? new FramebufferCursor(targetFramebuffer!, rectangle) : default;
+            FramebufferCursor framebufferCursor = hasTargetFramebuffer ? new FramebufferCursor(targetFramebuffer!, rectangle,
+                remoteFramebufferFormat.TrueColor ? null : _context.GetState<ProtocolState>().RemoteFramebufferColorMap) : default;
 
             // Get the compression type
             if ((compressionControl & 128) == 0) // Basic compression
