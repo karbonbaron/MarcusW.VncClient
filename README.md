@@ -1,10 +1,12 @@
-# VNC-Client Library for C#
+# VNC-Client Library for C# (Community Fork)
 
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/MarcusWichelmann/MarcusW.VncClient/Build?style=for-the-badge)
-![GitHub](https://img.shields.io/github/license/MarcusWichelmann/MarcusW.VncClient?style=for-the-badge)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/karbonbaron/MarcusW.VncClient/build.yml?style=for-the-badge)
+![GitHub](https://img.shields.io/github/license/karbonbaron/MarcusW.VncClient?style=for-the-badge)
 ![Nuget](https://img.shields.io/nuget/v/MarcusW.VncClient?style=for-the-badge)
 
-This project provides a very performant, fully managed C#-Library that implements the RFB protocol for easy integration of VNC-Client features into own applications. It's also cross-platform and runs every where .NET Core (or .NET 5 and so on...) runs.
+> **📢 Community Maintained**: This is a community-maintained fork of the original [MarcusW.VncClient](https://github.com/MarcusWichelmann/MarcusW.VncClient) library. Since the original maintainer stopped publishing NuGet packages, this fork continues to provide updated packages and maintenance.
+
+This project provides a very performant, fully managed C#-Library that implements the RFB protocol for easy integration of VNC-Client features into own applications. It's also cross-platform and runs everywhere .NET runs.
 
 ### [API Documentation](https://vnc-client.marcusw.de/apidoc/api/index.html)
 
@@ -62,17 +64,29 @@ If you're experiencing connection issues with newer VNC servers, try these steps
 
 For detailed debugging, check the connection logs which include protocol version negotiation and security type selection details.
 
+## ⚠️ Important: WebAssembly Limitation
+
+**Blazor WebAssembly is NOT supported** by the MarcusW.VncClient.Blazor package. This is a fundamental technical limitation:
+
+- **Why**: VNC protocol requires direct TCP socket connections to VNC servers
+- **Problem**: Web browsers (including WebAssembly) cannot create raw TCP sockets due to security restrictions
+- **Solution**: Use **Blazor Server** instead, where VNC connections run server-side and frames are sent to the browser via SignalR
+
+This is not a bug or limitation of this library - it's an inherent restriction of web browser security models.
+
 ### NuGet-Packages
 
 **Core library:** [MarcusW.VncClient](https://www.nuget.org/packages/MarcusW.VncClient)
 
 This is library contains the main protocol implementation and is completely platform-agnostic thanks to some abstractions using C# interfaces. It has no external dependencies.
 
-**Adapter libraries:** [MarcusW.VncClient.Avalonia](https://www.nuget.org/packages/MarcusW.VncClient.Avalonia), more may follow...
+**Adapter libraries:** 
+- [MarcusW.VncClient.Avalonia](https://www.nuget.org/packages/MarcusW.VncClient.Avalonia) - Avalonia UI controls
+- [MarcusW.VncClient.Blazor](https://www.nuget.org/packages/MarcusW.VncClient.Blazor) - Blazor Server components (⚠️ Blazor WASM not supported due to TCP limitations)
 
 These libraries provide platform specific implementations for the mentioned interfaces and provide e.g. user controls that can just be dropped into an UI application to make use of the VNC library very easily. These libraries depend on the core VNC library as well as the corresponding UI library.
 
-**You can find the latest packages for every commit that's pushed to master on [GitHub Packages](https://github.com/MarcusWichelmann?tab=packages&repo_name=MarcusW.VncClient).**
+**You can find the latest packages for every commit that's pushed to master on [GitHub Packages](https://github.com/karbonbaron/MarcusW.VncClient/packages).**
 
 ## Support me!
 
