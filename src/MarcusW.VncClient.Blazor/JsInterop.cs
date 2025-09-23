@@ -24,7 +24,7 @@ namespace MarcusW.VncClient.Blazor
         public JsInterop(IJSRuntime jsRuntime)
         {
             moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./_content/MarcusW.VncClient.Blazor/JsInterop.js").AsTask());
+                "import", "./_content/Community.MarcusW.VncClient.Blazor/JsInterop.js").AsTask());
         }
 
         public async ValueTask DrawRectangle(string canvasId, byte[] imageData, int x, int y, int width, int height)
