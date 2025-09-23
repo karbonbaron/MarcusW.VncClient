@@ -1,0 +1,915 @@
+﻿<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+  
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Class RfbConnection
+   </title>
+    <meta name="viewport" content="width=device-width">
+    <meta name="title" content="Class RfbConnection
+   ">
+    <meta name="generator" content="docfx 2.56.7.0">
+    
+    <link rel="shortcut icon" href="../favicon.ico">
+    <link rel="stylesheet" href="../styles/docfx.vendor.css">
+    <link rel="stylesheet" href="../styles/docfx.css">
+    <link rel="stylesheet" href="../styles/main.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"> 
+    <meta property="docfx:navrel" content="../toc.html">
+    <meta property="docfx:tocrel" content="toc.html">
+    
+    
+    
+  </head>  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+        
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../logo.svg" alt="">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+        
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div role="main" class="container body-content hide-when-search">
+        
+        <div class="sidenav hide-when-search">
+          <a class="btn toc-toggle collapse" data-toggle="collapse" href="#sidetoggle" aria-expanded="false" aria-controls="sidetoggle">Show / Hide Table of Contents</a>
+          <div class="sidetoggle collapse" id="sidetoggle">
+            <div id="sidetoc"></div>
+          </div>
+        </div>
+        <div class="article row grid-right">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="MarcusW.VncClient.RfbConnection">
+  
+  
+  <h1 id="MarcusW_VncClient_RfbConnection" data-uid="MarcusW.VncClient.RfbConnection" class="text-break">Class RfbConnection
+  </h1>
+  <div class="markdown level0 summary"><p>Connection with a remote server using the RFB protocol.</p>
+</div>
+  <div class="markdown level0 conceptual"></div>
+  <div class="inheritance">
+    <h5>Inheritance</h5>
+    <div class="level0"><span class="xref">System.Object</span></div>
+    <div class="level1"><span class="xref">RfbConnection</span></div>
+  </div>
+  <div classs="implements">
+    <h5>Implements</h5>
+    <div><span class="xref">IDisposable</span></div>
+  </div>
+  <h6><strong>Namespace</strong>: <a class="xref" href="MarcusW.VncClient.html">MarcusW.VncClient</a></h6>
+  <h6><strong>Assembly</strong>: MarcusW.VncClient.dll</h6>
+  <h5 id="MarcusW_VncClient_RfbConnection_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class RfbConnection : INotifyPropertyChanged, IDisposable</code></pre>
+  </div>
+  <h3 id="properties">Properties
+  </h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_ConnectionState.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.ConnectionState%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L90">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_ConnectionState_" data-uid="MarcusW.VncClient.RfbConnection.ConnectionState*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_ConnectionState" data-uid="MarcusW.VncClient.RfbConnection.ConnectionState">ConnectionState</h4>
+  <div class="markdown level1 summary"><p>Gets the current connection state. Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConnectionState ConnectionState { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.ConnectionState.html">ConnectionState</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_ContinuousUpdatesEnabled.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.ContinuousUpdatesEnabled%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L140">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_ContinuousUpdatesEnabled_" data-uid="MarcusW.VncClient.RfbConnection.ContinuousUpdatesEnabled*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_ContinuousUpdatesEnabled" data-uid="MarcusW.VncClient.RfbConnection.ContinuousUpdatesEnabled">ContinuousUpdatesEnabled</h4>
+  <div class="markdown level1 summary"><p>Gets the current state of the continuous update protocol feature.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool ContinuousUpdatesEnabled { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Boolean</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_DesktopIsResizable.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.DesktopIsResizable%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L130">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_DesktopIsResizable_" data-uid="MarcusW.VncClient.RfbConnection.DesktopIsResizable*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_DesktopIsResizable" data-uid="MarcusW.VncClient.RfbConnection.DesktopIsResizable">DesktopIsResizable</h4>
+  <div class="markdown level1 summary"><p>Gets whether the connection allows client-side desktop size changes.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool DesktopIsResizable { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Boolean</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_DesktopName.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.DesktopName%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L120">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_DesktopName_" data-uid="MarcusW.VncClient.RfbConnection.DesktopName*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_DesktopName" data-uid="MarcusW.VncClient.RfbConnection.DesktopName">DesktopName</h4>
+  <div class="markdown level1 summary"><p>Gets the current name of the remote desktop.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? DesktopName { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Nullable</span>&lt;<span class="xref">System.String</span>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_InterruptionCause.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.InterruptionCause%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L81">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_InterruptionCause_" data-uid="MarcusW.VncClient.RfbConnection.InterruptionCause*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_InterruptionCause" data-uid="MarcusW.VncClient.RfbConnection.InterruptionCause">InterruptionCause</h4>
+  <div class="markdown level1 summary"><p>Gets the <see cref="!:Exception"></see> that caused the last connection interruption.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Exception? InterruptionCause { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Nullable</span>&lt;<span class="xref">Exception</span>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_LoggerFactory.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.LoggerFactory%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L50">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_LoggerFactory_" data-uid="MarcusW.VncClient.RfbConnection.LoggerFactory*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_LoggerFactory" data-uid="MarcusW.VncClient.RfbConnection.LoggerFactory">LoggerFactory</h4>
+  <div class="markdown level1 summary"><p>Gets the logger factory implementation that should be used for creating new loggers.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ILoggerFactory LoggerFactory { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">ILoggerFactory</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_OutputHandler.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.OutputHandler%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L71">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_OutputHandler_" data-uid="MarcusW.VncClient.RfbConnection.OutputHandler*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_OutputHandler" data-uid="MarcusW.VncClient.RfbConnection.OutputHandler">OutputHandler</h4>
+  <div class="markdown level1 summary"><p>Gets or sets the handler for output events from the server.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IOutputHandler OutputHandler { get; set; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Output.IOutputHandler.html">IOutputHandler</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_Parameters.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.Parameters%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L55">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_Parameters_" data-uid="MarcusW.VncClient.RfbConnection.Parameters*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_Parameters" data-uid="MarcusW.VncClient.RfbConnection.Parameters">Parameters</h4>
+  <div class="markdown level1 summary"><p>Gets the connect parameters used for establishing this connection.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ConnectParameters Parameters { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.ConnectParameters.html">ConnectParameters</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_ProtocolImplementation.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.ProtocolImplementation%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L45">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_ProtocolImplementation_" data-uid="MarcusW.VncClient.RfbConnection.ProtocolImplementation*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_ProtocolImplementation" data-uid="MarcusW.VncClient.RfbConnection.ProtocolImplementation">ProtocolImplementation</h4>
+  <div class="markdown level1 summary"><p>Gets the used RFB protocol implementation.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IRfbProtocolImplementation ProtocolImplementation { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.html">IRfbProtocolImplementation</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_ProtocolVersion.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.ProtocolVersion%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L50">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_ProtocolVersion_" data-uid="MarcusW.VncClient.RfbConnection.ProtocolVersion*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_ProtocolVersion" data-uid="MarcusW.VncClient.RfbConnection.ProtocolVersion">ProtocolVersion</h4>
+  <div class="markdown level1 summary"><p>Gets the version of the protocol used for remote communication.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public RfbProtocolVersion ProtocolVersion { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbProtocolVersion.html">RfbProtocolVersion</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_RemoteFramebufferFormat.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.RemoteFramebufferFormat%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L100">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_RemoteFramebufferFormat_" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferFormat*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_RemoteFramebufferFormat" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferFormat">RemoteFramebufferFormat</h4>
+  <div class="markdown level1 summary"><p>Gets the current format of the remote view.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public PixelFormat RemoteFramebufferFormat { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.PixelFormat.html">PixelFormat</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_RemoteFramebufferLayout.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.RemoteFramebufferLayout%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L110">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_RemoteFramebufferLayout_" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferLayout*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_RemoteFramebufferLayout" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferLayout">RemoteFramebufferLayout</h4>
+  <div class="markdown level1 summary"><p>Gets the current layout of the remote view.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IImmutableSet&lt;Screen&gt; RemoteFramebufferLayout { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Screen.html">Screen</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_RemoteFramebufferSize.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.RemoteFramebufferSize%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L90">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_RemoteFramebufferSize_" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferSize*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_RemoteFramebufferSize" data-uid="MarcusW.VncClient.RfbConnection.RemoteFramebufferSize">RemoteFramebufferSize</h4>
+  <div class="markdown level1 summary"><p>Gets the current size of the remote view.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Size RemoteFramebufferSize { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Size.html">Size</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_RenderTarget.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.RenderTarget%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L61">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_RenderTarget_" data-uid="MarcusW.VncClient.RfbConnection.RenderTarget*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_RenderTarget" data-uid="MarcusW.VncClient.RfbConnection.RenderTarget">RenderTarget</h4>
+  <div class="markdown level1 summary"><p>Gets or sets the target where received frames should be rendered to.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IRenderTarget RenderTarget { get; set; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Rendering.IRenderTarget.html">IRenderTarget</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_UsedEncodingTypes.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.UsedEncodingTypes%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L80">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_UsedEncodingTypes_" data-uid="MarcusW.VncClient.RfbConnection.UsedEncodingTypes*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_UsedEncodingTypes" data-uid="MarcusW.VncClient.RfbConnection.UsedEncodingTypes">UsedEncodingTypes</h4>
+  <div class="markdown level1 summary"><p>Gets the encoding types that are currently used by this connection.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IImmutableSet&lt;IEncodingType&gt; UsedEncodingTypes { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Protocol.EncodingTypes.IEncodingType.html">IEncodingType</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_UsedMessageTypes.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.UsedMessageTypes%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L70">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_UsedMessageTypes_" data-uid="MarcusW.VncClient.RfbConnection.UsedMessageTypes*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_UsedMessageTypes" data-uid="MarcusW.VncClient.RfbConnection.UsedMessageTypes">UsedMessageTypes</h4>
+  <div class="markdown level1 summary"><p>Gets the message types that are currently used by this connection.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IImmutableSet&lt;IMessageType&gt; UsedMessageTypes { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Protocol.MessageTypes.IMessageType.html">IMessageType</a>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_UsedSecurityType.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.UsedSecurityType%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Details.cs/#L60">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_UsedSecurityType_" data-uid="MarcusW.VncClient.RfbConnection.UsedSecurityType*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_UsedSecurityType" data-uid="MarcusW.VncClient.RfbConnection.UsedSecurityType">UsedSecurityType</h4>
+  <div class="markdown level1 summary"><p>Gets the security type that was used for authenticating and securing the connection.
+Subscribe to <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_PropertyChanged">PropertyChanged</a> to receive change notifications.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ISecurityType UsedSecurityType { get; }</code></pre>
+  </div>
+  <h5 class="propertyValue">Property Value</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.SecurityTypes.ISecurityType.html">ISecurityType</a></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="methods">Methods
+  </h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_CloseAsync.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.CloseAsync%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L140">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_CloseAsync_" data-uid="MarcusW.VncClient.RfbConnection.CloseAsync*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_CloseAsync" data-uid="MarcusW.VncClient.RfbConnection.CloseAsync">CloseAsync()</h4>
+  <div class="markdown level1 summary"><p>Closes the running remote connection as well as any running reconnect attempts.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Task CloseAsync()</code></pre>
+  </div>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">Task</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_RfbConnection_CloseAsync_remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>To cancel the connection establishment, use the <see cref="!:CancellationToken"></see> passed to <span class="xref">MarcusW.VncClient.RfbConnection.StartAsync(CancellationToken)</span> instead.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_Dispose.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.Dispose%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L270">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_Dispose_" data-uid="MarcusW.VncClient.RfbConnection.Dispose*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_Dispose" data-uid="MarcusW.VncClient.RfbConnection.Dispose">Dispose()</h4>
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Dispose()</code></pre>
+  </div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_EnqueueMessage__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.EnqueueMessage%60%601(MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage%7B%60%600%7D%2CCancellationToken)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Messages.cs/#L19">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_EnqueueMessage_" data-uid="MarcusW.VncClient.RfbConnection.EnqueueMessage*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_EnqueueMessage__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken_" data-uid="MarcusW.VncClient.RfbConnection.EnqueueMessage``1(MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage{``0},CancellationToken)">EnqueueMessage&lt;TMessageType&gt;(IOutgoingMessage&lt;TMessageType&gt;, CancellationToken)</h4>
+  <div class="markdown level1 summary"><p>Adds the <code data-dev-comment-type="paramref" class="paramref">message</code> to the send queue and returns without waiting for it being sent.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool EnqueueMessage&lt;TMessageType&gt;(IOutgoingMessage&lt;TMessageType&gt; message, CancellationToken cancellationToken = null)
+    where TMessageType : class, IOutgoingMessageType</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage-1.html">IOutgoingMessage</a>&lt;TMessageType&gt;</td>
+        <td><span class="parametername">message</span></td>
+        <td><p>The message to send.</p>
+</td>
+      </tr>
+      <tr>
+        <td><span class="xref">CancellationToken</span></td>
+        <td><span class="parametername">cancellationToken</span></td>
+        <td><p>The cancellation token.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Boolean</span></td>
+        <td><p>True, if the message was queued, otherwise false.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TMessageType</span></td>
+        <td><p>The type of the message.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_RfbConnection_EnqueueMessage__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Please ensure the outgoing message type is marked as being supported by both sides before sending it. See <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_UsedMessageTypes">UsedMessageTypes</a>.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_SendMessageAsync__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.SendMessageAsync%60%601(MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage%7B%60%600%7D%2CCancellationToken)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Messages.cs/#L42">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_RfbConnection_SendMessageAsync_" data-uid="MarcusW.VncClient.RfbConnection.SendMessageAsync*"></a>
+  <h4 id="MarcusW_VncClient_RfbConnection_SendMessageAsync__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken_" data-uid="MarcusW.VncClient.RfbConnection.SendMessageAsync``1(MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage{``0},CancellationToken)">SendMessageAsync&lt;TMessageType&gt;(IOutgoingMessage&lt;TMessageType&gt;, CancellationToken)</h4>
+  <div class="markdown level1 summary"><p>Adds the <code data-dev-comment-type="paramref" class="paramref">message</code> to the send queue and returns a <see cref="!:Task"></see> that completes when the message was sent.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Task SendMessageAsync&lt;TMessageType&gt;(IOutgoingMessage&lt;TMessageType&gt; message, CancellationToken cancellationToken = null)
+    where TMessageType : class, IOutgoingMessageType</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.MessageTypes.IOutgoingMessage-1.html">IOutgoingMessage</a>&lt;TMessageType&gt;</td>
+        <td><span class="parametername">message</span></td>
+        <td><p>The message to send.</p>
+</td>
+      </tr>
+      <tr>
+        <td><span class="xref">CancellationToken</span></td>
+        <td><span class="parametername">cancellationToken</span></td>
+        <td><p>The cancellation token.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">Task</span></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="typeParameters">Type Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="parametername">TMessageType</span></td>
+        <td><p>The type of the message.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_RfbConnection_SendMessageAsync__1_MarcusW_VncClient_Protocol_MessageTypes_IOutgoingMessage___0__CancellationToken__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Please ensure the outgoing message type is marked as being supported by both sides before sending it. See <a class="xref" href="MarcusW.VncClient.RfbConnection.html#MarcusW_VncClient_RfbConnection_UsedMessageTypes">UsedMessageTypes</a>.</p>
+</div>
+  <h3 id="events">Events
+  </h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection_PropertyChanged.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection.PropertyChanged%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.cs/#L102">View Source</a>
+  </span>
+  <h4 id="MarcusW_VncClient_RfbConnection_PropertyChanged" data-uid="MarcusW.VncClient.RfbConnection.PropertyChanged">PropertyChanged</h4>
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public event PropertyChangedEventHandler? PropertyChanged</code></pre>
+  </div>
+  <h5 class="eventType">Event Type</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">System.Nullable</span>&lt;<span class="xref">PropertyChangedEventHandler</span>&gt;</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+  <h3 id="implements">Implements</h3>
+  <div>
+      <span class="xref">IDisposable</span>
+  </div>
+</article>
+          </div>
+          
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_RfbConnection.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.RfbConnection%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Improve this Doc</a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/RfbConnection.Messages.cs/#L9" class="contribution-link">View Source</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In This Article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+            
+            <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+    
+    <script type="text/javascript" src="../styles/docfx.vendor.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>

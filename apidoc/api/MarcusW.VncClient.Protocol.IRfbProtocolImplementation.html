@@ -1,0 +1,691 @@
+﻿<!DOCTYPE html>
+<!--[if IE]><![endif]-->
+<html>
+  
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Interface IRfbProtocolImplementation
+   </title>
+    <meta name="viewport" content="width=device-width">
+    <meta name="title" content="Interface IRfbProtocolImplementation
+   ">
+    <meta name="generator" content="docfx 2.56.7.0">
+    
+    <link rel="shortcut icon" href="../favicon.ico">
+    <link rel="stylesheet" href="../styles/docfx.vendor.css">
+    <link rel="stylesheet" href="../styles/docfx.css">
+    <link rel="stylesheet" href="../styles/main.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"> 
+    <meta property="docfx:navrel" content="../toc.html">
+    <meta property="docfx:tocrel" content="toc.html">
+    
+    
+    
+  </head>  <body data-spy="scroll" data-target="#affix" data-offset="120">
+    <div id="wrapper">
+      <header>
+        
+        <nav id="autocollapse" class="navbar navbar-inverse ng-scope" role="navigation">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              
+              <a class="navbar-brand" href="../index.html">
+                <img id="logo" class="svg" src="../logo.svg" alt="">
+              </a>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar">
+              <form class="navbar-form navbar-right" role="search" id="search">
+                <div class="form-group">
+                  <input type="text" class="form-control" id="search-query" placeholder="Search" autocomplete="off">
+                </div>
+              </form>
+            </div>
+          </div>
+        </nav>
+        
+        <div class="subnav navbar navbar-default">
+          <div class="container hide-when-search" id="breadcrumb">
+            <ul class="breadcrumb">
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </header>
+      <div role="main" class="container body-content hide-when-search">
+        
+        <div class="sidenav hide-when-search">
+          <a class="btn toc-toggle collapse" data-toggle="collapse" href="#sidetoggle" aria-expanded="false" aria-controls="sidetoggle">Show / Hide Table of Contents</a>
+          <div class="sidetoggle collapse" id="sidetoggle">
+            <div id="sidetoc"></div>
+          </div>
+        </div>
+        <div class="article row grid-right">
+          <div class="col-md-10">
+            <article class="content wrap" id="_content" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation">
+  
+  
+  <h1 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation" class="text-break">Interface IRfbProtocolImplementation
+  </h1>
+  <div class="markdown level0 summary"><p>Provides access to different elements of a RFB protocol implementation.</p>
+</div>
+  <div class="markdown level0 conceptual"></div>
+  <h6><strong>Namespace</strong>: <a class="xref" href="MarcusW.VncClient.Protocol.html">MarcusW.VncClient.Protocol</a></h6>
+  <h6><strong>Assembly</strong>: MarcusW.VncClient.dll</h6>
+  <h5 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_syntax">Syntax</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IRfbProtocolImplementation</code></pre>
+  </div>
+  <h3 id="methods">Methods
+  </h3>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateEncodingTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateEncodingTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L52">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateEncodingTypesCollection_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateEncodingTypesCollection*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateEncodingTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateEncodingTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateEncodingTypesCollection(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new collection of all supported <a class="xref" href="MarcusW.VncClient.Protocol.EncodingTypes.IEncodingType.html">IEncodingType</a>s.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IImmutableSet&lt;IEncodingType&gt; CreateEncodingTypesCollection(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Protocol.EncodingTypes.IEncodingType.html">IEncodingType</a>&gt;</td>
+        <td><p>An immutable set with all supported encoding types.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateEncodingTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Make sure the encoding types are newly instantiated on each call, because it's
+not guaranteed that they can safely be used across multiple connections simultaneously.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateJpegDecoder_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateJpegDecoder(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L101">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateJpegDecoder_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateJpegDecoder*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateJpegDecoder_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateJpegDecoder(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateJpegDecoder(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IJpegDecoder.html">IJpegDecoder</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IJpegDecoder CreateJpegDecoder(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IJpegDecoder.html">IJpegDecoder</a></td>
+        <td><p>A new instance of the jpeg decoder.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageReceiver_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageReceiver(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L80">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageReceiver_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageReceiver*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageReceiver_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageReceiver(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateMessageReceiver(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbMessageReceiver.html">IRfbMessageReceiver</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IRfbMessageReceiver CreateMessageReceiver(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbMessageReceiver.html">IRfbMessageReceiver</a></td>
+        <td><p>A new instance of the message receiver.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageSender_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageSender(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L87">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageSender_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageSender*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageSender_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageSender(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateMessageSender(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbMessageSender.html">IRfbMessageSender</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IRfbMessageSender CreateMessageSender(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbMessageSender.html">IRfbMessageSender</a></td>
+        <td><p>A new instance of the message sender.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L41">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageTypesCollection_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageTypesCollection*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateMessageTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateMessageTypesCollection(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new collection of all supported <a class="xref" href="MarcusW.VncClient.Protocol.MessageTypes.IMessageType.html">IMessageType</a>s.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IImmutableSet&lt;IMessageType&gt; CreateMessageTypesCollection(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Protocol.MessageTypes.IMessageType.html">IMessageType</a>&gt;</td>
+        <td><p>An immutable set with all supported message types.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateMessageTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Make sure the message types are newly instantiated on each call, because it's
+not guaranteed that they can safely be used across multiple connections simultaneously.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbHandshaker_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbHandshaker(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L66">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbHandshaker_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbHandshaker*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbHandshaker_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbHandshaker(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateRfbHandshaker(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbHandshaker.html">IRfbHandshaker</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IRfbHandshaker CreateRfbHandshaker(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbHandshaker.html">IRfbHandshaker</a></td>
+        <td><p>A new instance of the RFB handshaker.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbInitializer_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbInitializer(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L73">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbInitializer_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbInitializer*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateRfbInitializer_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateRfbInitializer(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateRfbInitializer(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbInitializer.html">IRfbInitializer</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IRfbInitializer CreateRfbInitializer(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IRfbInitializer.html">IRfbInitializer</a></td>
+        <td><p>A new instance of the RFB initializer.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateSecurityTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateSecurityTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L30">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateSecurityTypesCollection_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateSecurityTypesCollection*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateSecurityTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateSecurityTypesCollection(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateSecurityTypesCollection(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new collection of all supported <a class="xref" href="MarcusW.VncClient.Protocol.SecurityTypes.ISecurityType.html">ISecurityType</a>s.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IImmutableSet&lt;ISecurityType&gt; CreateSecurityTypesCollection(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="xref">IImmutableSet</span>&lt;<a class="xref" href="MarcusW.VncClient.Protocol.SecurityTypes.ISecurityType.html">ISecurityType</a>&gt;</td>
+        <td><p>An immutable set with all supported security types.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateSecurityTypesCollection_MarcusW_VncClient_Protocol_RfbConnectionContext__remarks">Remarks</h5>
+  <div class="markdown level1 remarks"><p>Make sure the security types are newly instantiated on each call, because it's
+not guaranteed that they can safely be used across multiple connections simultaneously.</p>
+</div>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateStateObject_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateStateObject(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L19">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateStateObject_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateStateObject*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateStateObject_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateStateObject(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateStateObject(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.IRfbProtocolState.html">IRfbProtocolState</a> state object.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IRfbProtocolState CreateStateObject(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.IRfbProtocolState.html">IRfbProtocolState</a></td>
+        <td><p>A new state object.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateTransportConnector_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateTransportConnector(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L59">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateTransportConnector_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateTransportConnector*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateTransportConnector_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateTransportConnector(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateTransportConnector(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.ITransportConnector.html">ITransportConnector</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">ITransportConnector CreateTransportConnector(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.ITransportConnector.html">ITransportConnector</a></td>
+        <td><p>A new instance of the transport connector.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="small pull-right mobile-hide">
+    <span class="divider">|</span>
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateZLibInflater_MarcusW_VncClient_Protocol_RfbConnectionContext_.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateZLibInflater(MarcusW.VncClient.Protocol.RfbConnectionContext)%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">Improve this Doc</a>
+  </span>
+  <span class="small pull-right mobile-hide">
+    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L94">View Source</a>
+  </span>
+  <a id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateZLibInflater_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateZLibInflater*"></a>
+  <h4 id="MarcusW_VncClient_Protocol_IRfbProtocolImplementation_CreateZLibInflater_MarcusW_VncClient_Protocol_RfbConnectionContext_" data-uid="MarcusW.VncClient.Protocol.IRfbProtocolImplementation.CreateZLibInflater(MarcusW.VncClient.Protocol.RfbConnectionContext)">CreateZLibInflater(RfbConnectionContext)</h4>
+  <div class="markdown level1 summary"><p>Creates a new <a class="xref" href="MarcusW.VncClient.Protocol.Services.IZLibInflater.html">IZLibInflater</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+  <h5 class="decalaration">Declaration</h5>
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">IZLibInflater CreateZLibInflater(RfbConnectionContext context)</code></pre>
+  </div>
+  <h5 class="parameters">Parameters</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.RfbConnectionContext.html">RfbConnectionContext</a></td>
+        <td><span class="parametername">context</span></td>
+        <td><p>Details about the associated connection.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+  <h5 class="returns">Returns</h5>
+  <table class="table table-bordered table-striped table-condensed">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="xref" href="MarcusW.VncClient.Protocol.Services.IZLibInflater.html">IZLibInflater</a></td>
+        <td><p>A new instance of the zlib inflater.</p>
+</td>
+      </tr>
+    </tbody>
+  </table>
+</article>
+          </div>
+          
+          <div class="hidden-sm col-md-2" role="complementary">
+            <div class="sideaffix">
+              <div class="contribution">
+                <ul class="nav">
+                  <li>
+                    <a href="https://github.com/karbonbaron/MarcusW.VncClient/new/master/apiSpec/new?filename=MarcusW_VncClient_Protocol_IRfbProtocolImplementation.md&amp;value=---%0Auid%3A%20MarcusW.VncClient.Protocol.IRfbProtocolImplementation%0Asummary%3A%20'*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax'%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A" class="contribution-link">Improve this Doc</a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/karbonbaron/MarcusW.VncClient/blob/master/src/MarcusW.VncClient/Protocol/IRfbProtocolImplementation.cs/#L12" class="contribution-link">View Source</a>
+                  </li>
+                </ul>
+              </div>
+              <nav class="bs-docs-sidebar hidden-print hidden-xs hidden-sm affix" id="affix">
+                <h5>In This Article</h5>
+                <div></div>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <footer>
+        <div class="grad-bottom"></div>
+        <div class="footer">
+          <div class="container">
+            <span class="pull-right">
+              <a href="#top">Back to top</a>
+            </span>
+            
+            <span>Generated by <strong>DocFX</strong></span>
+          </div>
+        </div>
+      </footer>
+    </div>
+    
+    <script type="text/javascript" src="../styles/docfx.vendor.js"></script>
+    <script type="text/javascript" src="../styles/docfx.js"></script>
+    <script type="text/javascript" src="../styles/main.js"></script>
+  </body>
+</html>
