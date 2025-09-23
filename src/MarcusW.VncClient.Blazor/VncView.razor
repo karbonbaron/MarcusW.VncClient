@@ -172,6 +172,9 @@
             // Subscribe to property changes to handle connection state changes
             _connection.PropertyChanged += OnConnectionPropertyChanged;
             
+            // Clear canvas and framebuffer when attaching to new connection
+            ClearCanvasAndFramebuffer();
+            
             // If connection is already established, request a full framebuffer update
             if (_connection.ConnectionState == ConnectionState.Connected)
             {
@@ -205,8 +208,8 @@
                     if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed)
                     {
                         var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
-                        // Use incremental request to be less demanding on the server
-                        var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(true, fullScreenRect);
+                        // Use NON-incremental request for full refresh on connect/reconnect
+                        var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(false, fullScreenRect);
                         _connection.EnqueueMessage(updateRequest);
                     }
                 }
@@ -215,6 +218,28 @@
                     Console.WriteLine($"Failed to request framebuffer update: {ex.Message}");
                 }
             }, TaskScheduler.Default);
+        }
+    }
+
+    private async void ClearCanvasAndFramebuffer()
+    {
+        try
+        {
+            // Clear the canvas to prevent showing old framebuffer data on reconnect
+            if (_canvas.HasValue)
+            {
+                await jsInterop.ClearCanvas($"vncCanvas_{_canvasId}");
+            }
+            
+            // Clear persistent framebuffer to ensure fresh start
+            if (_persistentFramebuffer != null)
+            {
+                Array.Clear(_persistentFramebuffer, 0, _persistentFramebuffer.Length);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error clearing canvas: {ex.Message}");
         }
     }
 
