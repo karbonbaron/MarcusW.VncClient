@@ -2,7 +2,7 @@
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/karbonbaron/MarcusW.VncClient/build.yml?style=for-the-badge)
 ![GitHub](https://img.shields.io/github/license/karbonbaron/MarcusW.VncClient?style=for-the-badge)
-![Nuget](https://img.shields.io/nuget/v/MarcusW.VncClient?style=for-the-badge)
+![Nuget](https://img.shields.io/nuget/v/Community.MarcusW.VncClient?style=for-the-badge)
 
 > **📢 Community Maintained**: This is a community-maintained fork of the original [MarcusW.VncClient](https://github.com/MarcusWichelmann/MarcusW.VncClient) library. Since the original maintainer stopped publishing NuGet packages, this fork continues to provide updated packages and maintenance.
 
@@ -76,13 +76,13 @@ This is not a bug or limitation of this library - it's an inherent restriction o
 
 ### NuGet-Packages
 
-**Core library:** [MarcusW.VncClient](https://www.nuget.org/packages/MarcusW.VncClient)
+**Core library:** [Community.MarcusW.VncClient](https://www.nuget.org/packages/Community.MarcusW.VncClient)
 
 This is library contains the main protocol implementation and is completely platform-agnostic thanks to some abstractions using C# interfaces. It has no external dependencies.
 
 **Adapter libraries:** 
-- [MarcusW.VncClient.Avalonia](https://www.nuget.org/packages/MarcusW.VncClient.Avalonia) - Avalonia UI controls
-- [MarcusW.VncClient.Blazor](https://www.nuget.org/packages/MarcusW.VncClient.Blazor) - Blazor Server components (⚠️ Blazor WASM not supported due to TCP limitations)
+- [Community.MarcusW.VncClient.Avalonia](https://www.nuget.org/packages/Community.MarcusW.VncClient.Avalonia) - Avalonia UI controls
+- [Community.MarcusW.VncClient.Blazor](https://www.nuget.org/packages/Community.MarcusW.VncClient.Blazor) - Blazor Server components (⚠️ Blazor WASM not supported due to TCP limitations)
 
 These libraries provide platform specific implementations for the mentioned interfaces and provide e.g. user controls that can just be dropped into an UI application to make use of the VNC library very easily. These libraries depend on the core VNC library as well as the corresponding UI library.
 

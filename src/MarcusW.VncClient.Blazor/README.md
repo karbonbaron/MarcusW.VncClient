@@ -1,182 +1,147 @@
 # MarcusW.VncClient.Blazor
 
-A Blazor component library for VNC client functionality, providing high-performance VNC rendering and input handling in web applications.
+Blazor Server adapter for the MarcusW.VncClient library. Enables VNC client functionality in Blazor Server applications with real-time SignalR communication.
 
-## Quick Start
+⚠️ **Important**: This package supports **Blazor Server ONLY**. WebAssembly is NOT supported because VNC requires direct TCP socket connections, which browsers cannot provide due to security restrictions.
 
-### 1. Add Package Reference
+## 🌟 Features
+
+- **Blazor Server**: Real-time VNC rendering via SignalR
+- **JavaScript Interop**: Efficient canvas-based rendering
+- **Component-Based**: Clean Razor component architecture
+- **Touch Support**: Mobile and tablet friendly interactions
+- **Responsive Design**: Adapts to different screen sizes
+- **Circuit Safe**: Handles Blazor circuit disconnections gracefully
+
+## 🚀 Quick Start
+
+### 1. Install Package
 
 ```xml
-<PackageReference Include="MarcusW.VncClient.Blazor" Version="1.0.0" />
+<PackageReference Include="Community.MarcusW.VncClient.Blazor" Version="2.0.0" />
 ```
 
-### 2. Register Services
+### 2. Add to Razor Component
 
-In your `Program.cs`:
-
-```csharp
-using MarcusW.VncClient.Blazor.Extensions;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add VNC client services with default configuration
-builder.Services.AddVncClientServices();
-
-// Or with custom configuration
-builder.Services.AddVncClientServices(options =>
-{
-    options.EnableDirtyRectangleRendering = true;
-    options.MaxDirtyRectangles = 50;
-    options.EnableFramebufferCaching = true;
-    options.DefaultCanvasSize = new Size(800, 600);
-    options.DefaultDpi = 96.0;
-});
-```
-
-### 3. Use the VNC Component
-
-In your Blazor component:
-
-```razor
+```html
 @page "/vnc"
 @using MarcusW.VncClient.Blazor
 
-<h3>VNC Client</h3>
-
-<VncView Connection="@_connection" 
-         OnFullscreenChange="@OnFullscreenChanged" />
+<VncViewer Connection="@vncConnection" 
+           Width="800" 
+           Height="600" 
+           OnConnectionStateChanged="HandleConnectionState" />
 
 @code {
-    private RfbConnection? _connection;
+    private RfbConnection? vncConnection;
     
-    private async Task OnFullscreenChanged(bool isFullscreen)
+    protected override async Task OnInitializedAsync()
     {
-        // Handle fullscreen state changes
-        Console.WriteLine($"Fullscreen: {isFullscreen}");
+        await ConnectToVncServer();
     }
-}
-```
-
-## Features
-
-### 🚀 High Performance
-- **Dirty Rectangle Rendering**: Only renders changed areas for optimal performance
-- **Buffer Pooling**: Reuses memory buffers to reduce garbage collection
-- **Optimized Pixel Conversion**: Efficient conversion from VNC formats to web-compatible RGBA
-
-### 🖱️ Full Input Support
-- **Mouse Events**: Click, drag, wheel scrolling with accurate coordinate mapping
-- **Keyboard Input**: Complete keyboard support including special keys and shortcuts
-- **Touch Support**: Works on mobile devices and tablets
-
-### 🖥️ Display Features
-- **Fullscreen Mode**: Immersive fullscreen experience with ESC key support
-- **Responsive Design**: Automatic scaling and responsive layout
-- **Multiple Pixel Formats**: Support for various VNC pixel formats (16-bit, 32-bit)
-
-### 🔧 Easy Integration
-- **Dependency Injection**: Full DI support with service registration
-- **Configuration Options**: Customizable behavior through options pattern
-- **Event-Driven**: Reactive programming with event callbacks
-
-## Architecture
-
-The library is built with a clean, service-oriented architecture:
-
-```
-MarcusW.VncClient.Blazor
-├── Components/
-│   └── VncView.razor              # Main VNC display component
-├── Services/
-│   ├── IFramebufferService        # Framebuffer management
-│   ├── IInputService              # Input event handling
-│   ├── IRenderingService          # Pixel conversion & rendering
-│   └── IFullscreenService         # Fullscreen functionality
-├── Extensions/
-│   └── ServiceCollectionExtensions # DI registration helpers
-└── Adapters/
-    └── Rendering/                 # Canvas and framebuffer adapters
-```
-
-## Configuration Options
-
-```csharp
-public class VncClientOptions
-{
-    /// <summary>Default pixel format when none specified</summary>
-    public PixelFormat? DefaultPixelFormat { get; set; }
     
-    /// <summary>Enable dirty rectangle rendering optimization</summary>
-    public bool EnableDirtyRectangleRendering { get; set; } = true;
-    
-    /// <summary>Max dirty rectangles before fallback to full render</summary>
-    public int MaxDirtyRectangles { get; set; } = 50;
-    
-    /// <summary>Enable framebuffer caching for better performance</summary>
-    public bool EnableFramebufferCaching { get; set; } = true;
-    
-    /// <summary>Default canvas size when none specified</summary>
-    public Size DefaultCanvasSize { get; set; } = new Size(800, 600);
-    
-    /// <summary>Default DPI settings for rendering</summary>
-    public double DefaultDpi { get; set; } = 96.0;
-}
-```
-
-## Advanced Usage
-
-### Custom Service Implementation
-
-You can replace any service with your own implementation:
-
-```csharp
-// Register custom rendering service
-builder.Services.AddVncClientServices();
-builder.Services.AddScoped<IRenderingService, MyCustomRenderingService>();
-```
-
-### Event Handling
-
-```csharp
-// Handle fullscreen changes
-<VncView Connection="@_connection" 
-         OnFullscreenChange="@((isFullscreen) => HandleFullscreenChange(isFullscreen))" />
-```
-
-### Direct Service Usage
-
-```csharp
-@inject IFramebufferService FramebufferService
-@inject IRenderingService RenderingService
-
-@code {
-    private async Task CustomRendering()
+    private async Task ConnectToVncServer()
     {
-        var framebufferData = FramebufferService.GetFramebufferData();
-        var dirtyRects = FramebufferService.GetDirtyRectangles();
-        
-        if (dirtyRects.Count > 0)
+        var vncClient = new VncClient(loggerFactory);
+        var parameters = new ConnectParameters
         {
-            await RenderingService.RenderDirtyRectanglesAsync(
-                "myCanvas", framebufferData, size, format, dirtyRects);
-        }
+            TransportParameters = new TcpTransportParameters
+            {
+                Host = "your-vnc-server.com",
+                Port = 5900
+            },
+            AuthenticationHandler = new YourAuthHandler()
+        };
+        
+        vncConnection = await vncClient.ConnectAsync(parameters);
+    }
+    
+    private void HandleConnectionState(ConnectionState state)
+    {
+        // Handle state changes
+        InvokeAsync(StateHasChanged);
     }
 }
 ```
 
-## Best Practices
+### 3. Configure Services
 
-1. **Service Lifetime**: Use `AddScoped` for Blazor Server, `AddTransient` for Blazor WebAssembly
-2. **Memory Management**: Services automatically handle buffer cleanup and disposal
-3. **Performance**: Enable dirty rectangle rendering for better performance on large displays
-4. **Configuration**: Tune `MaxDirtyRectangles` based on your expected update patterns
+```csharp
+// Program.cs (Blazor Server only)
+builder.Services.AddVncClientServices();
+```
 
-## Requirements
+## 🎮 Component Features
 
-- .NET 6.0 or later
-- Blazor Server or Blazor WebAssembly
-- Modern browser with HTML5 Canvas support
+- **Canvas Rendering**: High-performance HTML5 canvas display
+- **Input Handling**: Mouse, keyboard, and touch event processing
+- **Scaling Options**: Multiple scaling modes for different screen sizes
+- **Connection Management**: Built-in connection state visualization
+- **Error Boundaries**: Graceful error handling and recovery
 
-## License
+## 🔧 Advanced Configuration
 
-This library is licensed under the same terms as the main MarcusW.VncClient project.
+### Component Parameters
+
+```html
+<VncViewer Connection="@connection"
+           Width="1024"
+           Height="768"
+           ScaleMode="FitToContainer"
+           EnablePointerCapture="true"
+           ShowConnectionState="true"
+           OnFrameReceived="HandleFrame"
+           OnError="HandleError" />
+```
+
+### JavaScript Optimization
+
+```javascript
+// Custom rendering optimizations
+window.vncClient = {
+    optimizeCanvas: function(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
+    }
+};
+```
+
+## 🌐 Browser Compatibility
+
+- **Chrome/Edge**: Full support with optimal performance
+- **Firefox**: Full support with good performance  
+- **Safari**: Full support (some limitations on older versions)
+- **Mobile Browsers**: Touch input support with responsive design
+
+## ⚠️ Why Blazor Server Only?
+
+**Technical Limitation**: VNC protocol requires direct TCP socket connections to the VNC server. Web browsers (including WebAssembly) cannot create raw TCP sockets due to security restrictions - they can only make HTTP/WebSocket connections.
+
+**Blazor Server Solution**: 
+- VNC connection runs on the server (where TCP sockets are allowed)
+- Real-time updates sent to browser via SignalR
+- Client receives rendered frames and sends input back to server
+- No CORS issues since server handles all VNC communication
+
+## 🔒 Security Considerations
+
+Since VNC connections are handled server-side, ensure proper authentication and authorization for your Blazor Server application.
+
+## 📚 Dependencies
+
+This package depends on:
+- [Community.MarcusW.VncClient](https://www.nuget.org/packages/Community.MarcusW.VncClient) - Core VNC client
+- [Microsoft.AspNetCore.Components.Web](https://www.nuget.org/packages/Microsoft.AspNetCore.Components.Web) - Blazor web components
+
+## 📖 Complete Example
+
+See our [Blazor sample application](https://github.com/karbonbaron/MarcusW.VncClient/tree/master/samples/BlazorVncClient) for a complete implementation example.
+
+## 🤝 Contributing
+
+Contributions welcome! Please see our [GitHub repository](https://github.com/karbonbaron/MarcusW.VncClient) for guidelines.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/karbonbaron/MarcusW.VncClient/blob/master/LICENSE) file for details.

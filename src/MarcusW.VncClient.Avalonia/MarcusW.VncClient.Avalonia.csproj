@@ -1,9 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+    <PropertyGroup>
+        <!-- NuGet Package Properties -->
+        <PackageId>Community.MarcusW.VncClient.Avalonia</PackageId>
+        <Description>Community-maintained Avalonia UI adapter for MarcusW.VncClient. Enhanced VncView control with improved performance and modern Avalonia 11 support for seamless VNC integration. 🔗 Maintained at: https://github.com/karbonbaron/MarcusW.VncClient</Description>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>vnc-client-avalonia-icon.png</PackageIcon>
+        <PackageTags>VNC;RFB;Client;Library;Performance;Cross-Platform;Avalonia;UI;Control</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.3" />
-        <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.2" PrivateAssets="all" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
         <PackageReference Include="System.Reactive" Version="6.0.1" />
     </ItemGroup>
 
@@ -21,6 +30,11 @@
         <Compile Update="VncView.Sizing.cs">
           <DependentUpon>VncView.cs</DependentUpon>
         </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="/" />
+        <None Include="vnc-client-avalonia-icon.png" Pack="true" PackagePath="/" />
     </ItemGroup>
 
 </Project>

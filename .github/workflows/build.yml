@@ -10,19 +10,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        dotnet: [3.1.x]
+        dotnet: [9.0.x]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Setup .NET Core ${{ matrix.dotnet }}
-        uses: actions/setup-dotnet@v1
+      - name: Setup .NET ${{ matrix.dotnet }}
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ matrix.dotnet }}
 
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
       - name: Test
-        run: dotnet test -c Release --verbosity normal
+        run: dotnet test -c Release --no-build --verbosity normal
 
   apidoc:
     name: Publish Documentation
@@ -34,10 +40,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
 
       - name: Build API documentation
-        uses: nikeee/docfx-action@master
+        uses: nikeee/docfx-action@v1.0.0
         with:
           args: docs/docfx.json
 
@@ -49,53 +60,62 @@ jobs:
           cp README.md docs/pages/index.md
 
       - name: Deploy to GitHub pages
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: docs/pages
-          CLEAN: true
-          CLEAN_EXCLUDE: '["_config.yml", "CNAME"]'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/pages
 
   nuget:
     name: Publish NuGet Packages
     runs-on: ubuntu-latest
 
     # Runs only on commits to master or when creating a tag
-    if: github.ref == 'refs/heads/master' || contains(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     needs: test
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Setup .NET Core ${{ matrix.dotnet }}
-        uses: actions/setup-dotnet@v1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet }}
+          dotnet-version: 9.0.x
 
-      - name: Create Packages
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Create Pre-release Packages
         if: github.ref == 'refs/heads/master'
         run: |
           BUILD_NUMBER=$(git rev-parse --short HEAD)
-          dotnet pack src/MarcusW.VncClient -c Release -o packages -p:BuildNumber=$BUILD_NUMBER
-          dotnet pack src/MarcusW.VncClient.Avalonia -c Release -o packages -p:BuildNumber=$BUILD_NUMBER
+          dotnet pack src/MarcusW.VncClient -c Release -o packages -p:BuildNumber=$BUILD_NUMBER --no-restore
+          dotnet pack src/MarcusW.VncClient.Avalonia -c Release -o packages -p:BuildNumber=$BUILD_NUMBER --no-restore
+          dotnet pack src/MarcusW.VncClient.Blazor -c Release -o packages -p:BuildNumber=$BUILD_NUMBER --no-restore
 
-      - name: Create Release-Packages
-        if: contains(github.ref, 'refs/tags/')
+      - name: Create Release Packages
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          dotnet pack src/MarcusW.VncClient -c Release -o packages
-          dotnet pack src/MarcusW.VncClient.Avalonia -c Release -o packages
+          dotnet pack src/MarcusW.VncClient -c Release -o packages --no-restore
+          dotnet pack src/MarcusW.VncClient.Avalonia -c Release -o packages --no-restore
+          dotnet pack src/MarcusW.VncClient.Blazor -c Release -o packages --no-restore
+
+      - name: Validate Packages
+        run: |
+          dotnet tool install --global dotnet-validate --version 0.0.1-preview.304
+          dotnet validate package local packages/*.nupkg
 
       - name: Push to GitHub Packages
-        run: dotnet nuget push "packages/*.nupkg" -s https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json -k ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+        run: |
+          dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push "packages/*.nupkg" --source github --skip-duplicate
 
       - name: Push to nuget.org
-        if: contains(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         run: dotnet nuget push "packages/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: packages
           path: packages/

@@ -4,19 +4,29 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- NuGet Package Properties -->
+    <PackageId>Community.MarcusW.VncClient.Blazor</PackageId>
+    <Description>Community-maintained Blazor Server adapter for MarcusW.VncClient. Enhanced VNC components with improved SignalR integration and modern .NET 9 support. Blazor Server ONLY - WebAssembly NOT supported due to TCP limitations. 🔗 Maintained at: https://github.com/karbonbaron/MarcusW.VncClient</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>vnc-client-blazor-icon.png</PackageIcon>
+    <PackageTags>VNC;RFB;Client;Library;Performance;Blazor;Server;SignalR;JavaScript;Real-Time</PackageTags>
   </PropertyGroup>
 
 
-  <ItemGroup>
-    <SupportedPlatform Include="browser" />
-  </ItemGroup>
+  <!-- Blazor Server only - WebAssembly not supported due to TCP connection limitations -->
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.8" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MarcusW.VncClient\MarcusW.VncClient.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="vnc-client-blazor-icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>
