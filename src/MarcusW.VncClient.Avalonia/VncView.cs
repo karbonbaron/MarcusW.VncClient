@@ -1,5 +1,8 @@
 using System;
+using System.ComponentModel;
+using System.Reactive;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -74,6 +77,19 @@ namespace MarcusW.VncClient.Avalonia
                 }
 
                 SetAndRaise(ConnectionProperty, ref _connection, value);
+
+                if (_connection != null)
+                {
+                    _connectionDetachDisposable.Add(
+                        Observable.FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(handler => _connection.PropertyChanged += handler, handler => _connection.PropertyChanged -= handler)
+                        .Where(x => x.EventArgs.PropertyName == nameof(_connection.ConnectionState))
+                        .Select(_ => _connection.ConnectionState)
+                        .StartWith(ConnectionState.Connected)
+                        .DistinctUntilChanged()
+                        .Delay(TimeSpan.FromMilliseconds(500))
+                        .Subscribe(_ => ForceFullscreenUpdate())
+                        );
+                }
             }
         }
 
@@ -96,6 +112,23 @@ namespace MarcusW.VncClient.Avalonia
                 // Copy the text to the local clipboard
                 await TopLevel.GetTopLevel(this).Clipboard.SetTextAsync(text).ConfigureAwait(true);
             });
+        }
+
+        private void ForceFullscreenUpdate()
+        {
+            if (_connection == null || _connection.ConnectionState != ConnectionState.Connected)
+                return;
+
+            try
+            {
+                var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
+                var updateRequest = new FramebufferUpdateRequestMessage(false, fullScreenRect);
+                _connection.EnqueueMessage(updateRequest);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to request framebuffer update: {ex.Message}");
+            }
         }
     }
 }
