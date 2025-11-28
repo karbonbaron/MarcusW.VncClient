@@ -2,7 +2,6 @@ using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using MarcusW.VncClient.Protocol.EncodingTypes;
 using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming;
 using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Outgoing;
@@ -69,23 +68,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.EncodingTypes.Pseudo
             if (_state.ServerSupportsContinuousUpdates && _state.ContinuousUpdatesEnabled)
                 _context.MessageSender.EnqueueMessage(new EnableContinuousUpdatesMessage(true, wholeScreenRectangle));
 
-            // WAYVNC COMPATIBILITY: Delay desktop size update request to prevent flooding
-            // Desktop size changes trigger immediate requests which can overwhelm WayVNC
-            Task.Delay(300).ContinueWith(_ =>
-            {
-                try
-                {
-                    if (_context.MessageSender != null)
-                    {
-                        // Request a whole-screen non-incremental update just to be sure. The protocol explicitly allows this.
-                        _context.MessageSender.EnqueueMessage(new FramebufferUpdateRequestMessage(false, wholeScreenRectangle));
-                    }
-                }
-                catch (Exception)
-                {
-                    // Handle any disposal/cancellation issues gracefully
-                }
-            }, TaskScheduler.Default);
+            // Use centralized throttled request - respects DesktopResizeUpdateDelay from ConnectParameters
+            var delay = _context.Connection.Parameters.DesktopResizeUpdateDelay;
+            _context.MessageSender.EnqueueFramebufferUpdateRequestDelayed(wholeScreenRectangle, incremental: false, delay);
         }
     }
 }

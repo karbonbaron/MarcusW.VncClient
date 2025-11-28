@@ -197,27 +197,12 @@
 
     private void RequestFullFramebufferUpdate()
     {
-        if (_connection?.ConnectionState == ConnectionState.Connected)
+        if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed)
         {
-            // WAYVNC COMPATIBILITY: Add delay to prevent flooding server with immediate UI requests
-            // The Blazor component was sending immediate full requests that overwhelm WayVNC
-            Task.Delay(700).ContinueWith(_ =>
-            {
-                try
-                {
-                    if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed)
-                    {
-                        var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
-                        // Use NON-incremental request for full refresh on connect/reconnect
-                        var updateRequest = new Protocol.Implementation.MessageTypes.Outgoing.FramebufferUpdateRequestMessage(false, fullScreenRect);
-                        _connection.EnqueueMessage(updateRequest);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to request framebuffer update: {ex.Message}");
-                }
-            }, TaskScheduler.Default);
+            var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
+            // Use centralized throttled request - respects FramebufferUpdateDelay from ConnectParameters
+            // Non-incremental request for full refresh on connect/reconnect
+            _connection.EnqueueFramebufferUpdateRequest(fullScreenRect, incremental: false);
         }
     }
 

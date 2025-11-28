@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using MarcusW.VncClient.Protocol.EncodingTypes;
 using MarcusW.VncClient.Protocol.Implementation.EncodingTypes.Pseudo;
 using MarcusW.VncClient.Protocol.Implementation.MessageTypes.Outgoing;
@@ -227,23 +226,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.MessageTypes.Incoming
                 return;
             }
 
-            // WAYVNC COMPATIBILITY: Add delay before requesting next update to prevent flooding
-            // WayVNC gets overwhelmed by continuous rapid requests and disconnects the client
-            Task.Delay(500).ContinueWith(_ =>
-            {
-                try
-                {
-                    if (_context.MessageSender != null)
-                    {
-                        // Request next incremental update
-                        _context.MessageSender.EnqueueMessage(new FramebufferUpdateRequestMessage(true, wholeScreenRectangle));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to enqueue delayed framebuffer update request");
-                }
-            }, TaskScheduler.Default);
+            // Use centralized throttled request - respects FramebufferUpdateDelay from ConnectParameters
+            _context.MessageSender.EnqueueFramebufferUpdateRequest(wholeScreenRectangle, incremental: true);
         }
 
         private void VisualizeRectangle(IFramebufferReference targetFramebuffer, in Rectangle rectangle, Color color)

@@ -29,6 +29,8 @@ namespace MarcusW.VncClient
         private IOutputHandler? _initialOutputHandler;
         private int _jpegQualityLevel = 100;
         private JpegSubsamplingLevel _jpegSubsamplingLevel = JpegSubsamplingLevel.None;
+        private TimeSpan _framebufferUpdateDelay = TimeSpan.Zero;
+        private TimeSpan _desktopResizeUpdateDelay = TimeSpan.Zero;
 
         /// <summary>
         /// Specifies the transport type and parameters to connect to.
@@ -130,6 +132,28 @@ namespace MarcusW.VncClient
         {
             get => _jpegSubsamplingLevel;
             set => ThrowIfFrozen(() => _jpegSubsamplingLevel = value);
+        }
+
+        /// <summary>
+        /// Gets or sets the minimum delay between framebuffer update requests.
+        /// Set to <see cref="TimeSpan.Zero"/> to disable throttling. Default is Zero.
+        /// For WayVNC compatibility, use 300-500ms.
+        /// </summary>
+        public TimeSpan FramebufferUpdateDelay
+        {
+            get => _framebufferUpdateDelay;
+            set => ThrowIfFrozen(() => _framebufferUpdateDelay = value);
+        }
+
+        /// <summary>
+        /// Gets or sets the delay before requesting a full update after desktop resize.
+        /// Set to <see cref="TimeSpan.Zero"/> to disable. Default is Zero.
+        /// For WayVNC compatibility, use 200-300ms.
+        /// </summary>
+        public TimeSpan DesktopResizeUpdateDelay
+        {
+            get => _desktopResizeUpdateDelay;
+            set => ThrowIfFrozen(() => _desktopResizeUpdateDelay = value);
         }
 
         /// <inhertitdoc />

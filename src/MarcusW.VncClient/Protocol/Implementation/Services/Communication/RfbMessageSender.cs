@@ -28,6 +28,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
 
         private volatile bool _disposed;
 
+        // Throttling state
+        private DateTime _lastFramebufferRequestTime = DateTime.MinValue;
+        private readonly object _throttleLock = new object();
+        private readonly List<Timer> _pendingTimers = new List<Timer>();
+        private readonly object _timerLock = new object();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RfbMessageSender"/>.
         /// </summary>
@@ -180,6 +186,89 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
         }
 
         /// <inheritdoc />
+        public void EnqueueFramebufferUpdateRequest(Rectangle rectangle, bool incremental, CancellationToken cancellationToken = default)
+        {
+            var delay = _context.Connection.Parameters.FramebufferUpdateDelay;
+            EnqueueFramebufferUpdateRequestDelayed(rectangle, incremental, delay, cancellationToken);
+        }
+
+        /// <inheritdoc />
+        public void EnqueueFramebufferUpdateRequestDelayed(Rectangle rectangle, bool incremental, TimeSpan delay, CancellationToken cancellationToken = default)
+        {
+            if (_disposed)
+                return;
+
+            if (delay <= TimeSpan.Zero)
+            {
+                // No throttling - enqueue immediately
+                try
+                {
+                    EnqueueMessage(new FramebufferUpdateRequestMessage(incremental, rectangle), cancellationToken);
+                }
+                catch (ObjectDisposedException) { /* Connection closed */ }
+                catch (OperationCanceledException) { /* Cancelled */ }
+                return;
+            }
+
+            // Calculate actual delay needed based on last request time
+            TimeSpan actualDelay;
+            lock (_throttleLock)
+            {
+                var elapsed = DateTime.UtcNow - _lastFramebufferRequestTime;
+                actualDelay = elapsed >= delay ? TimeSpan.Zero : delay - elapsed;
+                _lastFramebufferRequestTime = DateTime.UtcNow + actualDelay;
+            }
+
+            if (actualDelay <= TimeSpan.Zero)
+            {
+                try
+                {
+                    EnqueueMessage(new FramebufferUpdateRequestMessage(incremental, rectangle), cancellationToken);
+                }
+                catch (ObjectDisposedException) { /* Connection closed */ }
+                catch (OperationCanceledException) { /* Cancelled */ }
+            }
+            else
+            {
+                // Use Timer for better lifecycle management than Task.Delay().ContinueWith()
+                Timer? timer = null;
+                timer = new Timer(_ =>
+                {
+                    try
+                    {
+                        if (!_disposed && !cancellationToken.IsCancellationRequested)
+                        {
+                            EnqueueMessage(new FramebufferUpdateRequestMessage(incremental, rectangle), cancellationToken);
+                        }
+                    }
+                    catch (ObjectDisposedException) { /* Connection closed */ }
+                    catch (OperationCanceledException) { /* Cancelled */ }
+                    finally
+                    {
+                        // Clean up timer
+                        lock (_timerLock)
+                        {
+                            _pendingTimers.Remove(timer!);
+                        }
+                        timer?.Dispose();
+                    }
+                }, null, actualDelay, Timeout.InfiniteTimeSpan);
+
+                lock (_timerLock)
+                {
+                    if (!_disposed)
+                    {
+                        _pendingTimers.Add(timer);
+                    }
+                    else
+                    {
+                        timer.Dispose();
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc />
         public void SendMessageAndWait<TMessageType>(IOutgoingMessage<TMessageType> message, CancellationToken cancellationToken = default)
             where TMessageType : class, IOutgoingMessageType
         {
@@ -233,11 +322,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                       
                         queueItem.CompletionSource?.SetResult(null);
                       
-                      // Add small delay between critical messages to prevent overwhelming the server
-                      if (messageType.Name == "SetEncodings" || messageType.Name == "FramebufferUpdateRequest")
-                      {
-                          Thread.Sleep(100);
-                      }
+                        // Add small delay after SetEncodings to allow server to process
+                        // Note: FramebufferUpdateRequest throttling is now handled by EnqueueFramebufferUpdateRequest
+                        if (messageType.Name == "SetEncodings")
+                        {
+                            Thread.Sleep(100);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -265,6 +355,16 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
 
             if (disposing)
             {
+                // Cancel all pending throttled timers
+                lock (_timerLock)
+                {
+                    foreach (var timer in _pendingTimers)
+                    {
+                        timer.Dispose();
+                    }
+                    _pendingTimers.Clear();
+                }
+
                 SetQueueCancelled();
                 _queue.Dispose();
             }
