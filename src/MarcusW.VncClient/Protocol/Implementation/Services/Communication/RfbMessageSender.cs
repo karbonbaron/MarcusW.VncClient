@@ -29,9 +29,11 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
         private volatile bool _disposed;
 
         // Throttling state
-        private DateTime _lastFramebufferRequestTime = DateTime.MinValue;
+        // Using Environment.TickCount64 for monotonic timing (immune to system clock changes)
+        private long _lastFramebufferRequestTicks = 0;
         private readonly object _throttleLock = new object();
-        private readonly List<Timer> _pendingTimers = new List<Timer>();
+        // Lock ordering: always acquire _throttleLock before _timerLock to prevent deadlocks
+        private readonly HashSet<Timer> _pendingTimers = new HashSet<Timer>();
         private readonly object _timerLock = new object();
 
         /// <summary>
@@ -210,13 +212,15 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                 return;
             }
 
-            // Calculate actual delay needed based on last request time
+            // Calculate actual delay needed based on last request time (using monotonic clock)
             TimeSpan actualDelay;
             lock (_throttleLock)
             {
-                var elapsed = DateTime.UtcNow - _lastFramebufferRequestTime;
+                long currentTicks = Environment.TickCount64;
+                long elapsedMs = currentTicks - _lastFramebufferRequestTicks;
+                var elapsed = TimeSpan.FromMilliseconds(elapsedMs);
                 actualDelay = elapsed >= delay ? TimeSpan.Zero : delay - elapsed;
-                _lastFramebufferRequestTime = DateTime.UtcNow + actualDelay;
+                _lastFramebufferRequestTicks = currentTicks + (long)actualDelay.TotalMilliseconds;
             }
 
             if (actualDelay <= TimeSpan.Zero)
@@ -232,6 +236,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
             {
                 // Use Timer for better lifecycle management than Task.Delay().ContinueWith()
                 Timer? timer = null;
+                CancellationTokenRegistration? registration = null;
+
                 timer = new Timer(_ =>
                 {
                     try
@@ -241,18 +247,24 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                             EnqueueMessage(new FramebufferUpdateRequestMessage(incremental, rectangle), cancellationToken);
                         }
                     }
-                    catch (ObjectDisposedException) { /* Connection closed */ }
-                    catch (OperationCanceledException) { /* Cancelled */ }
+                    catch (ObjectDisposedException) { /* Expected during shutdown */ }
+                    catch (OperationCanceledException) { /* Expected when cancelled */ }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Unexpected error in throttled framebuffer request callback");
+                    }
                     finally
                     {
-                        // Clean up timer
-                        lock (_timerLock)
-                        {
-                            _pendingTimers.Remove(timer!);
-                        }
-                        timer?.Dispose();
+                        // Clean up timer and registration
+                        CleanupThrottleTimer(timer!, registration);
                     }
                 }, null, actualDelay, Timeout.InfiniteTimeSpan);
+
+                // Register cancellation callback to clean up timer if cancellation is requested
+                if (cancellationToken.CanBeCanceled)
+                {
+                    registration = cancellationToken.Register(() => CleanupThrottleTimer(timer!, registration));
+                }
 
                 lock (_timerLock)
                 {
@@ -262,10 +274,23 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                     }
                     else
                     {
-                        timer.Dispose();
+                        CleanupThrottleTimer(timer, registration);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Cleans up a throttle timer and its cancellation registration.
+        /// </summary>
+        private void CleanupThrottleTimer(Timer timer, CancellationTokenRegistration? registration)
+        {
+            lock (_timerLock)
+            {
+                _pendingTimers.Remove(timer);
+            }
+            timer.Dispose();
+            registration?.Dispose();
         }
 
         /// <inheritdoc />
@@ -412,3 +437,4 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
         }
     }
 }
+

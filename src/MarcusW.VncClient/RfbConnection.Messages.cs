@@ -3,11 +3,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using MarcusW.VncClient.Protocol;
 using MarcusW.VncClient.Protocol.MessageTypes;
+using MarcusW.VncClient.Protocol.Services;
 
 namespace MarcusW.VncClient
 {
     public partial class RfbConnection
     {
+        /// <summary>
+        /// Tries to get the active message sender.
+        /// </summary>
+        /// <param name="messageSender">The message sender if available.</param>
+        /// <returns>True if a message sender is available, otherwise false.</returns>
+        private bool TryGetMessageSender(out IRfbMessageSender? messageSender)
+        {
+            messageSender = _activeConnection?.MessageSender;
+            return messageSender != null;
+        }
+
         /// <summary>
         /// Adds the <paramref name="message"/> to the send queue and returns without waiting for it being sent.
         /// </summary>
@@ -24,11 +36,10 @@ namespace MarcusW.VncClient
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            RfbConnectionContext? connection = _activeConnection;
-            if (connection?.MessageSender == null)
+            if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            connection.MessageSender.EnqueueMessage(message, cancellationToken);
+            messageSender!.EnqueueMessage(message, cancellationToken);
             return true;
         }
 
@@ -43,11 +54,10 @@ namespace MarcusW.VncClient
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            RfbConnectionContext? connection = _activeConnection;
-            if (connection?.MessageSender == null)
+            if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            connection.MessageSender.EnqueueFramebufferUpdateRequest(rectangle, incremental, cancellationToken);
+            messageSender!.EnqueueFramebufferUpdateRequest(rectangle, incremental, cancellationToken);
             return true;
         }
 
@@ -63,11 +73,10 @@ namespace MarcusW.VncClient
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            RfbConnectionContext? connection = _activeConnection;
-            if (connection?.MessageSender == null)
+            if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            connection.MessageSender.EnqueueFramebufferUpdateRequestDelayed(rectangle, incremental, delay, cancellationToken);
+            messageSender!.EnqueueFramebufferUpdateRequestDelayed(rectangle, incremental, delay, cancellationToken);
             return true;
         }
 
@@ -86,11 +95,10 @@ namespace MarcusW.VncClient
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            RfbConnectionContext? connection = _activeConnection;
-            if (connection?.MessageSender == null)
+            if (!TryGetMessageSender(out var messageSender))
                 return Task.CompletedTask;
 
-            return connection.MessageSender.SendMessageAndWaitAsync(message, cancellationToken);
+            return messageSender!.SendMessageAndWaitAsync(message, cancellationToken);
         }
     }
 }

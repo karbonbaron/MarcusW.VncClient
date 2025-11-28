@@ -171,6 +171,10 @@ namespace MarcusW.VncClient
                 throw new ConnectParametersValidationException($"{nameof(JpegQualityLevel)} parameter is not a valid percentage.");
             if (!Enum.IsDefined(typeof(JpegSubsamplingLevel), JpegSubsamplingLevel))
                 throw new ConnectParametersValidationException($"{nameof(JpegSubsamplingLevel)} parameter is invalid.");
+            if (FramebufferUpdateDelay < TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(FramebufferUpdateDelay)} parameter must not be negative.");
+            if (DesktopResizeUpdateDelay < TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(DesktopResizeUpdateDelay)} parameter must not be negative.");
         }
 
         /// <inheritdoc />
