@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -16,7 +16,7 @@
         <Title>High-performance cross-platform VNC-Client library for .NET</Title>
         <Authors>Marcus Wichelmann, Community Contributors</Authors>
         <Company>Community Maintained</Company>
-        <Copyright>Copyright 2020-2025 © Marcus Wichelmann and Contributors</Copyright>
+        <Copyright>Copyright 2020-2026 © Marcus Wichelmann and Contributors</Copyright>
         <PackageTags>VNC;RFB;Client;Library;Performance;Modular;Cross-Platform;Remote-Desktop;Protocol</PackageTags>
         <PackageProjectUrl>https://github.com/karbonbaron/MarcusW.VncClient</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -86,7 +86,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Commented out for development - uncomment if HTTPS certificate is configured
+// app.UseHttpsRedirection();
 
 
 app.UseAntiforgery();

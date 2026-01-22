@@ -9,7 +9,7 @@ This is a high-performance, cross-platform VNC client library for .NET with Blaz
 - Use **nullable reference types** (`#nullable enable`)
 - Follow **Microsoft C# naming conventions**
 - Use **implicit usings** where beneficial
-- Target **.NET 9.0** for new components
+- Target **.NET 10.0** for new components
 - Prefer **readonly** fields and **const** values where appropriate
 - Use **pattern matching** and modern C# features
 
