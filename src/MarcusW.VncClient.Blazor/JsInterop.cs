@@ -20,9 +20,11 @@ namespace MarcusW.VncClient.Blazor
     public class JsInterop : IAsyncDisposable
     {
         private readonly Lazy<Task<IJSObjectReference>> moduleTask;
+        private readonly IJSRuntime _jsRuntime;
 
         public JsInterop(IJSRuntime jsRuntime)
         {
+            _jsRuntime = jsRuntime;
             moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
                 "import", "./_content/Community.MarcusW.VncClient.Blazor/JsInterop.js").AsTask());
         }
@@ -94,6 +96,22 @@ namespace MarcusW.VncClient.Blazor
         {
             var module = await moduleTask.Value;
             return await module.InvokeAsync<string>("showPrompt", message);
+        }
+
+        // Clipboard API methods - using global window helper
+        public async ValueTask<bool> CopyToClipboard(string text)
+        {
+            return await _jsRuntime.InvokeAsync<bool>("vncClipboardHelper.copyToClipboard", text);
+        }
+
+        public async ValueTask<bool> SetupClipboardMonitoring(string canvasId, DotNetObjectReference<object> dotNetObjectRef)
+        {
+            return await _jsRuntime.InvokeAsync<bool>("vncClipboardHelper.setupClipboardMonitoring", canvasId, dotNetObjectRef);
+        }
+
+        public async ValueTask CleanupClipboardMonitoring(string canvasId)
+        {
+            await _jsRuntime.InvokeVoidAsync("vncClipboardHelper.cleanupClipboardMonitoring", canvasId);
         }
 
         public async ValueTask DisposeAsync()

@@ -72,6 +72,97 @@
     }
 </style>
 
+<script>
+    window.vncClipboardHelper = window.vncClipboardHelper || {
+        // Copy text to browser clipboard
+        copyToClipboard: async function(text) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.error('VNC: Failed to copy to clipboard:', err);
+                return false;
+            }
+        },
+
+        // Set up clipboard monitoring on canvas
+        setupClipboardMonitoring: function(canvasId, dotNetRef) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) {
+                return false;
+            }
+
+            // Ensure canvas is focusable and focus it on click
+            if (!canvas._vncClickHandler) {
+                canvas._vncClickHandler = function() {
+                    canvas.focus();
+                };
+                canvas.addEventListener('click', canvas._vncClickHandler);
+            }
+
+            // Paste event handler
+            if (!canvas._vncPasteHandler) {
+                canvas._vncPasteHandler = async function(e) {
+                    e.preventDefault();
+                    try {
+                        const text = (e.clipboardData || window.clipboardData).getData('text');
+                        if (text && dotNetRef) {
+                            await dotNetRef.invokeMethodAsync('OnClipboardPaste', text);
+                        }
+                    } catch (err) {
+                        console.error('VNC: Paste error:', err);
+                    }
+                };
+                canvas.addEventListener('paste', canvas._vncPasteHandler);
+            }
+
+            // Keyboard shortcut handler for Ctrl+V / Cmd+V
+            if (!canvas._vncKeyHandler) {
+                canvas._vncKeyHandler = async function(e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                        e.preventDefault();
+                        try {
+                            if (navigator.clipboard && navigator.clipboard.readText) {
+                                const text = await navigator.clipboard.readText();
+                                if (text && dotNetRef) {
+                                    await dotNetRef.invokeMethodAsync('OnClipboardPaste', text);
+                                }
+                            }
+                        } catch (err) {
+                            // Clipboard read may fail due to permissions - silently ignore
+                        }
+                    }
+                };
+                canvas.addEventListener('keydown', canvas._vncKeyHandler);
+            }
+            
+            return true;
+        },
+
+        // Clean up clipboard monitoring
+        cleanupClipboardMonitoring: function(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) {
+                if (canvas._vncPasteHandler) {
+                    canvas.removeEventListener('paste', canvas._vncPasteHandler);
+                    delete canvas._vncPasteHandler;
+                }
+                if (canvas._vncKeyHandler) {
+                    canvas.removeEventListener('keydown', canvas._vncKeyHandler);
+                    delete canvas._vncKeyHandler;
+                }
+                if (canvas._vncClickHandler) {
+                    canvas.removeEventListener('click', canvas._vncClickHandler);
+                    delete canvas._vncClickHandler;
+                }
+            }
+        }
+    };
+</script>
+
 @code {
     [Parameter]
     public RfbConnection? Connection 
@@ -116,6 +207,10 @@
     // Fullscreen functionality
     private bool _isFullscreen = false;
     private DotNetObjectReference<VncView>? _dotNetObjectRef;
+    
+    // Clipboard functionality
+    private bool _clipboardMonitoringSetup = false;
+    private DotNetObjectReference<object>? _clipboardDotNetRef;
 
     private static PixelFormat _PixelFormat = new PixelFormat(
         "RGBA", // Assuming the format name is "RGBA"
@@ -179,6 +274,9 @@
             if (_connection.ConnectionState == ConnectionState.Connected)
             {
                 RequestFullFramebufferUpdate();
+                
+                // Also set up clipboard monitoring if already connected
+                InvokeAsync(SetupClipboardMonitoringAsync);
             }
             
             // Force initial rendering
@@ -192,7 +290,42 @@
             _connection?.ConnectionState == ConnectionState.Connected)
         {
             RequestFullFramebufferUpdate();
+            
+            // Set up clipboard monitoring when connected
+            InvokeAsync(SetupClipboardMonitoringAsync);
         }
+    }
+    
+    private async Task SetupClipboardMonitoringAsync()
+    {
+        if (_clipboardMonitoringSetup || !_canvas.HasValue)
+            return;
+
+        try
+        {
+            // Create object reference for clipboard callbacks
+            _clipboardDotNetRef = DotNetObjectReference.Create((object)this);
+            var success = await jsInterop.SetupClipboardMonitoring($"vncCanvas_{_canvasId}", _clipboardDotNetRef);
+            
+            if (success)
+            {
+                _clipboardMonitoringSetup = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"VNC: Failed to set up clipboard monitoring: {ex.Message}");
+        }
+    }
+    
+    [JSInvokable]
+    public Task OnClipboardPaste(string text)
+    {
+        if (_connection?.ConnectionState == ConnectionState.Connected && !string.IsNullOrEmpty(text))
+        {
+            _connection.SendClipboardText(text);
+        }
+        return Task.CompletedTask;
     }
 
     private void RequestFullFramebufferUpdate()
@@ -389,9 +522,18 @@
 
     public virtual void HandleServerClipboardUpdate(string text)
     {
-        // In a browser context, we would need to use the Clipboard API
-        // For now, just log it
-        Console.WriteLine($"Clipboard update: {text}");
+        // Copy text to browser clipboard using JavaScript interop
+        InvokeAsync(async () =>
+        {
+            try
+            {
+                await jsInterop.CopyToClipboard(text);
+            }
+            catch
+            {
+                // Silently ignore clipboard errors
+            }
+        });
     }
     
     private async Task DrawTestPattern()
@@ -584,7 +726,7 @@
             }
         }
 
-        // Clean up fullscreen listener
+        // Clean up fullscreen listener and clipboard monitoring
         if (_dotNetObjectRef != null)
         {
             _ = Task.Run(async () =>
@@ -592,6 +734,12 @@
                 try
                 {
                     await jsInterop.RemoveFullscreenChangeListener();
+                    
+                    // Clean up clipboard monitoring
+                    if (_clipboardMonitoringSetup)
+                    {
+                        await jsInterop.CleanupClipboardMonitoring($"vncCanvas_{_canvasId}");
+                    }
                 }
                 catch
                 {
@@ -600,6 +748,9 @@
             });
             _dotNetObjectRef.Dispose();
         }
+        
+        // Dispose clipboard reference
+        _clipboardDotNetRef?.Dispose();
 
         _disposed = true;
     }
