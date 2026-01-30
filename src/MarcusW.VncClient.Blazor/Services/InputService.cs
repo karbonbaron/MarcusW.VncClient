@@ -54,8 +54,8 @@ namespace MarcusW.VncClient.Blazor.Services
 
         public async Task HandleKeyDownAsync(KeyboardEventArgs e, RfbConnection? connection, Func<Task> exitFullscreenAction, bool isFullscreen)
         {
-            // Handle ESC key to exit fullscreen
-            if (e.Key == "Escape" && isFullscreen)
+            // Handle ESC key to exit fullscreen (unless Ctrl+Shift+Esc for Task Manager)
+            if (e.Key == "Escape" && isFullscreen && !(e.CtrlKey && e.ShiftKey))
             {
                 await exitFullscreenAction();
                 return;
@@ -63,6 +63,16 @@ namespace MarcusW.VncClient.Blazor.Services
 
             if (connection?.ConnectionState == ConnectionState.Connected)
             {
+                // Special key combinations are intercepted by JavaScript (preventDefault)
+                // to prevent browser default behavior, but still forwarded here to VNC.
+                // Intercepted combinations include:
+                // - Alt+F4 (close window)
+                // - Alt+Tab (window switching)
+                // - Ctrl+Alt+Delete (security screen)
+                // - Ctrl+Shift+Esc (task manager)
+                // - Super/Windows key combinations
+                // - And others defined in VncView.razor JavaScript
+                
                 var keySymbol = ConvertToKeySymbol(e);
                 connection.EnqueueMessage(new KeyEventMessage(true, keySymbol));
             }
@@ -70,8 +80,8 @@ namespace MarcusW.VncClient.Blazor.Services
 
         public Task HandleKeyUpAsync(KeyboardEventArgs e, RfbConnection? connection, bool isFullscreen)
         {
-            // Skip ESC key up if we're handling fullscreen
-            if (e.Key == "Escape" && isFullscreen)
+            // Skip ESC key up if we're handling fullscreen (unless Ctrl+Shift+Esc for Task Manager)
+            if (e.Key == "Escape" && isFullscreen && !(e.CtrlKey && e.ShiftKey))
             {
                 return Task.CompletedTask;
             }

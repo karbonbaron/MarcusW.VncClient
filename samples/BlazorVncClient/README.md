@@ -98,6 +98,13 @@ https://localhost:5001/vnc_view?host=192.168.1.100&port=5900&user=vnc&password=p
 
 4. **Interact:**
    - Once connected, you can interact with the remote desktop using mouse and keyboard
+   - **Special Key Combinations**: System-level shortcuts are automatically captured and forwarded:
+     - `Alt+F4`, `Alt+Tab` - Windows management
+     - `Ctrl+Alt+Delete`, `Ctrl+Shift+Esc` - System functions
+     - `Win+L`, `Win+D`, `Win+R` - Windows shortcuts
+     - `Ctrl+Alt+T`, `Ctrl+Alt+Arrows` - Linux shortcuts
+     - `F11` - Remote fullscreen
+   - **Clipboard Integration**: Use `Ctrl+V` to paste into the remote session
    - The connection information panel shows:
      - Connection status and protocol version
      - Security type used for authentication

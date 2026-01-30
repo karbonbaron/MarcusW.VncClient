@@ -78,6 +78,31 @@ builder.Services.AddVncClientServices();
 - **Scaling Options**: Multiple scaling modes for different screen sizes
 - **Connection Management**: Built-in connection state visualization
 - **Error Boundaries**: Graceful error handling and recovery
+- **Clipboard Integration**: Copy/paste between browser and remote session
+- **Special Key Capture**: System-level shortcuts forwarded to remote session
+
+### ⌨️ Special Key Combinations
+
+The component automatically captures and forwards important system-level key combinations to the remote VNC session:
+
+**Windows Shortcuts:**
+- `Alt+F4` - Close window
+- `Alt+Tab` / `Alt+Shift+Tab` - Window switching
+- `Ctrl+Alt+Delete` - Security screen
+- `Ctrl+Shift+Esc` - Task Manager
+- `Win+L` - Lock screen
+- `Win+D` - Show/hide desktop
+- `Win+R` - Run dialog
+- `Win+E` - File Explorer
+- `Win+Arrow keys` - Window snapping
+- `F11` - Fullscreen toggle
+
+**Linux Shortcuts:**
+- `Ctrl+Alt+T` - Terminal
+- `Ctrl+Alt+Arrow keys` - Switch virtual desktops
+- `Alt+F1` / `Alt+F2` - Application launcher
+
+These shortcuts are intercepted before the browser can process them, ensuring they reach the remote desktop instead of affecting your local browser.
 
 ## 🔧 Advanced Configuration
 

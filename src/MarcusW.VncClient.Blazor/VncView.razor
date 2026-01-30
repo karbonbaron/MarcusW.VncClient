@@ -88,6 +88,70 @@
             }
         },
 
+        // Check if a key combination should be intercepted and sent to VNC
+        shouldInterceptKeyCombination: function(e) {
+            // System-level shortcuts that should be sent to remote VNC server
+            
+            // Alt+F4 - Close window
+            if (e.altKey && e.key === 'F4') {
+                return true;
+            }
+            
+            // Alt+Tab / Alt+Shift+Tab - Window switching
+            if (e.altKey && e.key === 'Tab') {
+                return true;
+            }
+            
+            // Ctrl+Alt+Delete - Security screen (Windows/Linux)
+            if (e.ctrlKey && e.altKey && e.key === 'Delete') {
+                return true;
+            }
+            
+            // Ctrl+Shift+Esc - Task Manager (Windows)
+            if (e.ctrlKey && e.shiftKey && e.key === 'Escape') {
+                return true;
+            }
+            
+            // Windows/Super key combinations (Meta key)
+            if (e.metaKey && !e.ctrlKey) {
+                // Super+L - Lock screen
+                // Super+D - Show/hide desktop
+                // Super+R - Run dialog
+                // Super+E - Explorer
+                // Super+Arrow keys - Window snapping
+                const metaKeys = ['l', 'L', 'd', 'D', 'r', 'R', 'e', 'E', 
+                                  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                if (metaKeys.includes(e.key)) {
+                    return true;
+                }
+            }
+            
+            // Ctrl+Alt+T - Terminal (Linux)
+            if (e.ctrlKey && e.altKey && (e.key === 't' || e.key === 'T')) {
+                return true;
+            }
+            
+            // Ctrl+Alt+Arrow keys - Switch virtual desktops (Linux)
+            if (e.ctrlKey && e.altKey && 
+                (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || 
+                 e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                return true;
+            }
+            
+            // Alt+F1, Alt+F2 - Application launcher (Linux)
+            if (e.altKey && (e.key === 'F1' || e.key === 'F2')) {
+                return true;
+            }
+            
+            // F11 - Should be sent to remote (browser fullscreen is less useful in VNC context)
+            // But only when canvas has focus
+            if (e.key === 'F11') {
+                return true;
+            }
+            
+            return false;
+        },
+
         // Set up clipboard monitoring on canvas
         setupClipboardMonitoring: function(canvasId, dotNetRef) {
             const canvas = document.getElementById(canvasId);
@@ -119,9 +183,10 @@
                 canvas.addEventListener('paste', canvas._vncPasteHandler);
             }
 
-            // Keyboard shortcut handler for Ctrl+V / Cmd+V
+            // Keyboard shortcut handler for Ctrl+V / Cmd+V and special key combinations
             if (!canvas._vncKeyHandler) {
                 canvas._vncKeyHandler = async function(e) {
+                    // Handle clipboard paste (Ctrl+V / Cmd+V)
                     if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
                         e.preventDefault();
                         try {
@@ -134,6 +199,14 @@
                         } catch (err) {
                             // Clipboard read may fail due to permissions - silently ignore
                         }
+                        return;
+                    }
+                    
+                    // Intercept special key combinations to send to VNC
+                    const shouldIntercept = window.vncClipboardHelper.shouldInterceptKeyCombination(e);
+                    if (shouldIntercept) {
+                        e.preventDefault();
+                        // The key will be sent to VNC via the normal keydown/keyup handlers
                     }
                 };
                 canvas.addEventListener('keydown', canvas._vncKeyHandler);
