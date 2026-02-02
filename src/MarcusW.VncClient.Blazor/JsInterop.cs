@@ -114,6 +114,17 @@ namespace MarcusW.VncClient.Blazor
             await _jsRuntime.InvokeVoidAsync("vncClipboardHelper.cleanupClipboardMonitoring", canvasId);
         }
 
+        // Special Keys Menu drag functionality
+        public async ValueTask SetupMenuDrag(string menuId, DotNetObjectReference<object> dotNetObjectRef)
+        {
+            await _jsRuntime.InvokeVoidAsync("vncMenuDrag.setup", menuId, dotNetObjectRef);
+        }
+
+        public async ValueTask CleanupMenuDrag(string menuId)
+        {
+            await _jsRuntime.InvokeVoidAsync("vncMenuDrag.cleanup", menuId);
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)

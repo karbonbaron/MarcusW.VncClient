@@ -81,28 +81,58 @@ builder.Services.AddVncClientServices();
 - **Clipboard Integration**: Copy/paste between browser and remote session
 - **Special Key Capture**: System-level shortcuts forwarded to remote session
 
-### ⌨️ Special Key Combinations
+### ⌨️ Keyboard Input & Special Keys
 
-The component automatically captures and forwards important system-level key combinations to the remote VNC session:
+The component provides comprehensive keyboard input support with a **Special Keys Menu** to overcome browser limitations.
+
+**✅ Regular Keyboard Input:**
+- All regular typing (letters, numbers, symbols)
+- Function keys (`F1`-`F12`)
+- Navigation keys (arrows, Home, End, Page Up/Down)
+- Clipboard paste (`Ctrl+V` / `Cmd+V`)
+- Most `Ctrl+` key combinations
+- `Ctrl+Alt+T` - Terminal (Linux)
+- `Ctrl+Alt+Arrow keys` - Virtual desktops (Linux)
+- `F11` - Fullscreen toggle (sent to remote instead of browser)
+
+**⌨️ Special Keys Menu:**
+
+For OS-protected shortcuts that cannot be captured via keyboard, use the **"⌨️"** floating button:
+
+**Features:**
+- 🎯 **Draggable** - Click and drag the button to reposition it anywhere on the screen
+- 📌 **Stays where you put it** - Position is remembered during the session
+- 🔄 **Collapsible** - Small icon button expands to show menu when clicked
+- ✨ **Auto-closes** - Menu automatically collapses after sending a key combo
 
 **Windows Shortcuts:**
-- `Alt+F4` - Close window
-- `Alt+Tab` / `Alt+Shift+Tab` - Window switching
 - `Ctrl+Alt+Delete` - Security screen
 - `Ctrl+Shift+Esc` - Task Manager
-- `Win+L` - Lock screen
-- `Win+D` - Show/hide desktop
+- `Alt+F4` - Close window
+- `Alt+Tab` - Switch window
 - `Win+R` - Run dialog
+- `Win+D` - Show desktop
 - `Win+E` - File Explorer
-- `Win+Arrow keys` - Window snapping
-- `F11` - Fullscreen toggle
+- `Win+L` - Lock screen
 
 **Linux Shortcuts:**
 - `Ctrl+Alt+T` - Terminal
-- `Ctrl+Alt+Arrow keys` - Switch virtual desktops
-- `Alt+F1` / `Alt+F2` - Application launcher
+- `Ctrl+Alt+F1-F7` - TTY switching
 
-These shortcuts are intercepted before the browser can process them, ensuring they reach the remote desktop instead of affecting your local browser.
+These menu items programmatically send the key combinations directly to the VNC server, bypassing browser keyboard event limitations.
+
+**💡 How It Works:**
+
+- **Typing on keyboard**: Captured and sent in real-time (except OS-protected shortcuts)
+- **Special Keys menu**: Click to send OS-protected shortcuts that can't be typed
+- The menu appears when connected and automatically closes after sending a key combo
+
+**🎯 Usage Tips:**
+
+1. **Click the canvas** to ensure it has focus (blue border when focused)
+2. **Type normally** for most operations
+3. **Use the Special Keys menu** for system-level shortcuts (Ctrl+Alt+Del, Win+R, etc.)
+4. Use **fullscreen mode** for optimal keyboard capture of regular keys
 
 ## 🔧 Advanced Configuration
 

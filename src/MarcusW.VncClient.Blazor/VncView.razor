@@ -23,20 +23,69 @@
             id="vncCanvas_@_canvasId" 
             width="@canvasSize.Width" 
             height="@canvasSize.Height" 
-            style="border: 1px solid #ddd; background-color: #000; max-width: @(_isFullscreen ? "100vw" : "100%"); max-height: @(_isFullscreen ? "100vh" : "70vh");"
+            style="border: 1px solid #ddd; background-color: #000; max-width: @(_isFullscreen ? "100vw" : "100%"); max-height: @(_isFullscreen ? "100vh" : "70vh"); outline: none;"
             @onmousedown="OnMouseDown"
             @onmouseup="OnMouseUp"
             @onmousemove="OnMouseMove"
             @onwheel="OnWheel"
             @onkeydown="OnKeyDown"
             @onkeyup="OnKeyUp"
-            tabindex="0">
+            @onfocus="OnCanvasFocus"
+            @onblur="OnCanvasBlur"
+            tabindex="0"
+            title="Click to focus for keyboard input">
     </canvas>
+    
+    @* Special Keys Menu - draggable floating button *@
+    @if (_connection?.ConnectionState == ConnectionState.Connected)
+    {
+        <div class="vnc-special-keys-menu" 
+             id="specialKeysButton_@_canvasId"
+             style="position: absolute; top: @(_menuTop)px; right: @(_menuRight)px; z-index: 10000; cursor: move;"
+             @onmousedown="OnMenuMouseDown"
+             @onmousedown:preventDefault="false">
+            <div class="dropdown">
+                <button class="btn btn-sm @(_showSpecialKeysMenu ? "btn-primary" : "btn-secondary")" 
+                        type="button" 
+                        id="specialKeysMenu"
+                        @onclick="ToggleSpecialKeysMenu"
+                        @onclick:stopPropagation="true"
+                        style="opacity: 0.85; min-width: 40px;"
+                        title="Special Keys Menu (drag to move)">
+                    ⌨️
+                </button>
+                @if (_showSpecialKeysMenu)
+                {
+                    <div class="dropdown-menu show" style="display: block; right: 0; left: auto;">
+                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                            <span>Windows Shortcuts</span>
+                            <button type="button" class="btn-close btn-close-sm" @onclick="CloseSpecialKeysMenu" style="font-size: 0.7rem;"></button>
+                        </div>
+                        <button class="dropdown-item" @onclick="() => SendCtrlAltDelete()">Ctrl+Alt+Delete</button>
+                        <button class="dropdown-item" @onclick="() => SendCtrlShiftEsc()">Ctrl+Shift+Esc (Task Manager)</button>
+                        <button class="dropdown-item" @onclick="() => SendAltF4()">Alt+F4 (Close Window)</button>
+                        <button class="dropdown-item" @onclick="() => SendAltTab()">Alt+Tab (Switch Window)</button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" @onclick="() => SendWinKey('r')">Win+R (Run Dialog)</button>
+                        <button class="dropdown-item" @onclick="() => SendWinKey('d')">Win+D (Show Desktop)</button>
+                        <button class="dropdown-item" @onclick="() => SendWinKey('e')">Win+E (Explorer)</button>
+                        <button class="dropdown-item" @onclick="() => SendWinKey('l')">Win+L (Lock Screen)</button>
+                        <div class="dropdown-divider"></div>
+                        <h6 class="dropdown-header">Linux Shortcuts</h6>
+                        <button class="dropdown-item" @onclick="() => SendCtrlAltKey('t')">Ctrl+Alt+T (Terminal)</button>
+                        <button class="dropdown-item" @onclick="() => SendCtrlAltF(1)">Ctrl+Alt+F1 (TTY1)</button>
+                        <button class="dropdown-item" @onclick="() => SendCtrlAltF(2)">Ctrl+Alt+F2 (TTY2)</button>
+                        <button class="dropdown-item" @onclick="() => SendCtrlAltF(7)">Ctrl+Alt+F7 (GUI)</button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
     
     @if (_isFullscreen)
     {
-        <div class="fullscreen-controls" style="position: absolute; top: 20px; right: 20px; z-index: 10000;">
-            <button class="btn btn-outline-light btn-sm" @onclick="ExitFullscreenAsync">
+        <div class="fullscreen-controls" style="position: absolute; top: 10px; left: 10px; z-index: 10000;">
+            <button class="btn btn-outline-light btn-sm" @onclick="ExitFullscreenAsync" style="opacity: 0.8;">
                 <i class="fas fa-compress"></i> Exit Fullscreen (ESC)
             </button>
         </div>
@@ -51,6 +100,53 @@
 </div>
 
 <style>
+    .vnc-viewer canvas {
+        cursor: default;
+    }
+    
+    .vnc-viewer canvas:focus {
+        border-color: #007bff !important;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+    
+    .vnc-special-keys-menu {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+    
+    .vnc-special-keys-menu .dropdown-menu {
+        max-height: 400px;
+        overflow-y: auto;
+        cursor: default;
+    }
+    
+    .vnc-special-keys-menu .dropdown-item {
+        cursor: pointer;
+        font-size: 0.9rem;
+        padding: 0.4rem 1rem;
+    }
+    
+    .vnc-special-keys-menu .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .vnc-special-keys-menu .dropdown-header {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #6c757d;
+        padding: 0.5rem 1rem;
+    }
+    
+    .vnc-special-keys-menu button.btn {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .vnc-special-keys-menu button.btn:hover {
+        opacity: 1 !important;
+    }
+    
     .vnc-viewer.fullscreen {
         position: fixed !important;
         top: 0 !important;
@@ -90,62 +186,41 @@
 
         // Check if a key combination should be intercepted and sent to VNC
         shouldInterceptKeyCombination: function(e) {
-            // System-level shortcuts that should be sent to remote VNC server
+            // Intercept key combinations that CAN be captured by the browser
+            // NOTE: OS-protected shortcuts (Ctrl+Alt+Delete, Win+R, Alt+F4, Alt+Tab)
+            // cannot be intercepted - the OS handles them before the browser sees them
             
-            // Alt+F4 - Close window
-            if (e.altKey && e.key === 'F4') {
-                return true;
-            }
-            
-            // Alt+Tab / Alt+Shift+Tab - Window switching
-            if (e.altKey && e.key === 'Tab') {
-                return true;
-            }
-            
-            // Ctrl+Alt+Delete - Security screen (Windows/Linux)
-            if (e.ctrlKey && e.altKey && e.key === 'Delete') {
-                return true;
-            }
-            
-            // Ctrl+Shift+Esc - Task Manager (Windows)
+            // Ctrl+Shift+Esc - Task Manager (can work in some browsers)
             if (e.ctrlKey && e.shiftKey && e.key === 'Escape') {
                 return true;
             }
             
-            // Windows/Super key combinations (Meta key)
-            if (e.metaKey && !e.ctrlKey) {
-                // Super+L - Lock screen
-                // Super+D - Show/hide desktop
-                // Super+R - Run dialog
-                // Super+E - Explorer
-                // Super+Arrow keys - Window snapping
-                const metaKeys = ['l', 'L', 'd', 'D', 'r', 'R', 'e', 'E', 
-                                  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-                if (metaKeys.includes(e.key)) {
+            // Ctrl+Alt combinations (Linux shortcuts, may work)
+            if (e.ctrlKey && e.altKey) {
+                // Ctrl+Alt+T - Terminal (Linux)
+                if (e.key === 't' || e.key === 'T') return true;
+                
+                // Ctrl+Alt+Arrow keys - Virtual desktops (Linux)
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || 
+                    e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    return true;
+                }
+                
+                // Ctrl+Alt+Function keys (various system functions)
+                if (e.key.startsWith('F') && e.key.length <= 3) {
                     return true;
                 }
             }
             
-            // Ctrl+Alt+T - Terminal (Linux)
-            if (e.ctrlKey && e.altKey && (e.key === 't' || e.key === 'T')) {
-                return true;
+            // Alt+Function keys (may work)
+            if (e.altKey && !e.ctrlKey && !e.metaKey) {
+                if (e.key === 'F1' || e.key === 'F2' || e.key === 'F3') {
+                    return true;
+                }
             }
             
-            // Ctrl+Alt+Arrow keys - Switch virtual desktops (Linux)
-            if (e.ctrlKey && e.altKey && 
-                (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || 
-                 e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-                return true;
-            }
-            
-            // Alt+F1, Alt+F2 - Application launcher (Linux)
-            if (e.altKey && (e.key === 'F1' || e.key === 'F2')) {
-                return true;
-            }
-            
-            // F11 - Should be sent to remote (browser fullscreen is less useful in VNC context)
-            // But only when canvas has focus
-            if (e.key === 'F11') {
+            // F11 - Fullscreen toggle (send to remote instead of browser)
+            if (e.key === 'F11' && !e.ctrlKey && !e.altKey && !e.metaKey) {
                 return true;
             }
             
@@ -185,31 +260,37 @@
 
             // Keyboard shortcut handler for Ctrl+V / Cmd+V and special key combinations
             if (!canvas._vncKeyHandler) {
-                canvas._vncKeyHandler = async function(e) {
-                    // Handle clipboard paste (Ctrl+V / Cmd+V)
+                canvas._vncKeyHandler = function(e) {
+                    // Handle clipboard paste (Ctrl+V / Cmd+V) FIRST
                     if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
                         e.preventDefault();
-                        try {
-                            if (navigator.clipboard && navigator.clipboard.readText) {
-                                const text = await navigator.clipboard.readText();
-                                if (text && dotNetRef) {
-                                    await dotNetRef.invokeMethodAsync('OnClipboardPaste', text);
+                        // Handle paste asynchronously after preventing default
+                        (async () => {
+                            try {
+                                if (navigator.clipboard && navigator.clipboard.readText) {
+                                    const text = await navigator.clipboard.readText();
+                                    if (text && dotNetRef) {
+                                        await dotNetRef.invokeMethodAsync('OnClipboardPaste', text);
+                                    }
                                 }
+                            } catch (err) {
+                                // Clipboard read may fail due to permissions - silently ignore
                             }
-                        } catch (err) {
-                            // Clipboard read may fail due to permissions - silently ignore
-                        }
-                        return;
+                        })();
+                        // Don't let this event reach the remote - we handled it
+                        return false;
                     }
                     
                     // Intercept special key combinations to send to VNC
                     const shouldIntercept = window.vncClipboardHelper.shouldInterceptKeyCombination(e);
                     if (shouldIntercept) {
                         e.preventDefault();
-                        // The key will be sent to VNC via the normal keydown/keyup handlers
+                        // Let the event propagate to Blazor's onkeydown handler
+                        // which will send it to the VNC server
                     }
                 };
-                canvas.addEventListener('keydown', canvas._vncKeyHandler);
+                // Use capture phase to intercept events early
+                canvas.addEventListener('keydown', canvas._vncKeyHandler, true);
             }
             
             return true;
@@ -224,13 +305,90 @@
                     delete canvas._vncPasteHandler;
                 }
                 if (canvas._vncKeyHandler) {
-                    canvas.removeEventListener('keydown', canvas._vncKeyHandler);
+                    // Remove with capture flag to match how it was added
+                    canvas.removeEventListener('keydown', canvas._vncKeyHandler, true);
                     delete canvas._vncKeyHandler;
                 }
                 if (canvas._vncClickHandler) {
                     canvas.removeEventListener('click', canvas._vncClickHandler);
                     delete canvas._vncClickHandler;
                 }
+            }
+        }
+    };
+    
+    // Special Keys Menu drag functionality
+    window.vncMenuDrag = {
+        setup: function(menuId, dotNetRef) {
+            const menu = document.getElementById(menuId);
+            if (!menu) return;
+            
+            let isDragging = false;
+            let startX, startY, startTop, startRight;
+            let currentTop, currentRight;
+            
+            const button = menu.querySelector('button');
+            
+            const onMouseDown = function(e) {
+                // Only drag when clicking the button, not the dropdown
+                if (e.target === button || button.contains(e.target)) {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    
+                    const rect = menu.getBoundingClientRect();
+                    const containerRect = menu.parentElement.getBoundingClientRect();
+                    
+                    startTop = rect.top - containerRect.top;
+                    startRight = containerRect.right - rect.right;
+                    
+                    e.preventDefault();
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                }
+            };
+            
+            const onMouseMove = function(e) {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const deltaY = e.clientY - startY;
+                
+                currentTop = Math.max(0, startTop + deltaY);
+                currentRight = Math.max(0, startRight - deltaX);
+                
+                menu.style.top = currentTop + 'px';
+                menu.style.right = currentRight + 'px';
+            };
+            
+            const onMouseUp = function(e) {
+                if (isDragging) {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    
+                    // Save position back to Blazor component
+                    if (dotNetRef && currentTop !== undefined) {
+                        dotNetRef.invokeMethodAsync('UpdateMenuPosition', Math.round(currentTop), Math.round(currentRight));
+                    }
+                }
+            };
+            
+            menu.addEventListener('mousedown', onMouseDown);
+            
+            // Cleanup function
+            menu._vncDragCleanup = function() {
+                menu.removeEventListener('mousedown', onMouseDown);
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+        },
+        
+        cleanup: function(menuId) {
+            const menu = document.getElementById(menuId);
+            if (menu && menu._vncDragCleanup) {
+                menu._vncDragCleanup();
+                delete menu._vncDragCleanup;
             }
         }
     };
@@ -284,6 +442,12 @@
     // Clipboard functionality
     private bool _clipboardMonitoringSetup = false;
     private DotNetObjectReference<object>? _clipboardDotNetRef;
+    
+    // Special keys menu
+    private bool _showSpecialKeysMenu = false;
+    private int _menuTop = 10;
+    private int _menuRight = 10;
+    private bool _menuDragSetup = false;
 
     private static PixelFormat _PixelFormat = new PixelFormat(
         "RGBA", // Assuming the format name is "RGBA"
@@ -326,6 +490,23 @@
             if (_connection != null)
             {
                 AttachToConnection();
+            }
+        }
+        
+        // Set up drag functionality for special keys menu (once when connected)
+        if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed && !_menuDragSetup)
+        {
+            try
+            {
+                if (_dotNetObjectRef != null)
+                {
+                    await jsInterop.SetupMenuDrag($"specialKeysButton_{_canvasId}", DotNetObjectReference.Create((object)this));
+                    _menuDragSetup = true;
+                }
+            }
+            catch
+            {
+                // Ignore setup errors
             }
         }
     }
@@ -447,6 +628,9 @@
                     _connection.RenderTarget = null;
                 if (ReferenceEquals(_connection.OutputHandler, this))
                     _connection.OutputHandler = null;
+                    
+                // Reset setup flags for reconnection
+                _menuDragSetup = false;
             }
             catch (ObjectDisposedException)
             {
@@ -692,6 +876,19 @@
     {
         await inputService.HandleKeyUpAsync(e, _connection, _isFullscreen);
     }
+    
+    // Focus handlers to provide visual feedback
+    private void OnCanvasFocus(FocusEventArgs e)
+    {
+        // Canvas has focus - keyboard input will be captured
+        Console.WriteLine("VNC Canvas focused - keyboard input active");
+    }
+    
+    private void OnCanvasBlur(FocusEventArgs e)
+    {
+        // Canvas lost focus - keyboard input may not work
+        Console.WriteLine("VNC Canvas blurred - click canvas to activate keyboard");
+    }
 
     // Cached canvas dimensions to avoid repeated JS interop calls
     private CanvasDimensions? _cachedCanvasDimensions;
@@ -813,6 +1010,9 @@
                     {
                         await jsInterop.CleanupClipboardMonitoring($"vncCanvas_{_canvasId}");
                     }
+                    
+                    // Clean up menu drag
+                    await jsInterop.CleanupMenuDrag($"specialKeysButton_{_canvasId}");
                 }
                 catch
                 {
@@ -863,5 +1063,97 @@
         
         await OnFullscreenChange.InvokeAsync(isFullscreen);
         StateHasChanged();
+    }
+    
+    // Special keys menu functionality
+    private void ToggleSpecialKeysMenu()
+    {
+        _showSpecialKeysMenu = !_showSpecialKeysMenu;
+        StateHasChanged();
+    }
+    
+    private void CloseSpecialKeysMenu()
+    {
+        _showSpecialKeysMenu = false;
+        StateHasChanged();
+    }
+    
+    private void OnMenuMouseDown(MouseEventArgs e)
+    {
+        // Allow drag handling by JavaScript
+    }
+    
+    [JSInvokable]
+    public void UpdateMenuPosition(int top, int right)
+    {
+        _menuTop = top;
+        _menuRight = right;
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Sends a key combination directly to the VNC server by programmatically
+    /// creating KeyEventMessages. This bypasses browser keyboard event limitations.
+    /// </summary>
+    private void SendKeyCombo(params KeySymbol[] keys)
+    {
+        if (_connection?.ConnectionState != ConnectionState.Connected)
+            return;
+            
+        // Send all keys down
+        foreach (var key in keys)
+        {
+            _connection.EnqueueMessage(new KeyEventMessage(true, key));
+        }
+        
+        // Send all keys up in reverse order
+        for (int i = keys.Length - 1; i >= 0; i--)
+        {
+            _connection.EnqueueMessage(new KeyEventMessage(false, keys[i]));
+        }
+        
+        // Close menu after sending
+        _showSpecialKeysMenu = false;
+        StateHasChanged();
+    }
+    
+    // Windows shortcuts
+    private void SendCtrlAltDelete() => SendKeyCombo(KeySymbol.Control_L, KeySymbol.Alt_L, KeySymbol.Delete);
+    private void SendCtrlShiftEsc() => SendKeyCombo(KeySymbol.Control_L, KeySymbol.Shift_L, KeySymbol.Escape);
+    private void SendAltF4() => SendKeyCombo(KeySymbol.Alt_L, KeySymbol.F4);
+    private void SendAltTab() => SendKeyCombo(KeySymbol.Alt_L, KeySymbol.Tab);
+    
+    private void SendWinKey(char key)
+    {
+        var keySymbol = (KeySymbol)char.ToLower(key);
+        SendKeyCombo(KeySymbol.Super_L, keySymbol);
+    }
+    
+    // Linux shortcuts
+    private void SendCtrlAltKey(char key)
+    {
+        var keySymbol = (KeySymbol)char.ToLower(key);
+        SendKeyCombo(KeySymbol.Control_L, KeySymbol.Alt_L, keySymbol);
+    }
+    
+    private void SendCtrlAltF(int number)
+    {
+        KeySymbol fKey = number switch
+        {
+            1 => KeySymbol.F1,
+            2 => KeySymbol.F2,
+            3 => KeySymbol.F3,
+            4 => KeySymbol.F4,
+            5 => KeySymbol.F5,
+            6 => KeySymbol.F6,
+            7 => KeySymbol.F7,
+            8 => KeySymbol.F8,
+            9 => KeySymbol.F9,
+            10 => KeySymbol.F10,
+            11 => KeySymbol.F11,
+            12 => KeySymbol.F12,
+            _ => KeySymbol.F1
+        };
+        SendKeyCombo(KeySymbol.Control_L, KeySymbol.Alt_L, fKey);
     }
 }

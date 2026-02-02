@@ -63,16 +63,28 @@ namespace MarcusW.VncClient.Blazor.Services
 
             if (connection?.ConnectionState == ConnectionState.Connected)
             {
-                // Special key combinations are intercepted by JavaScript (preventDefault)
-                // to prevent browser default behavior, but still forwarded here to VNC.
-                // Intercepted combinations include:
-                // - Alt+F4 (close window)
-                // - Alt+Tab (window switching)
-                // - Ctrl+Alt+Delete (security screen)
-                // - Ctrl+Shift+Esc (task manager)
-                // - Super/Windows key combinations
-                // - And others defined in VncView.razor JavaScript
+                // VNC protocol requires modifier keys to be sent separately
+                // When browser sends a key combination as one event, we need to send modifiers first
                 
+                // Send modifier keys down first (if not already the key being pressed)
+                if (e.CtrlKey && e.Key != "Control" && e.Key != "ControlLeft" && e.Key != "ControlRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(true, KeySymbol.Control_L));
+                }
+                if (e.AltKey && e.Key != "Alt" && e.Key != "AltLeft" && e.Key != "AltRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(true, KeySymbol.Alt_L));
+                }
+                if (e.ShiftKey && e.Key != "Shift" && e.Key != "ShiftLeft" && e.Key != "ShiftRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(true, KeySymbol.Shift_L));
+                }
+                if (e.MetaKey && e.Key != "Meta" && e.Key != "MetaLeft" && e.Key != "MetaRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(true, KeySymbol.Super_L));
+                }
+                
+                // Then send the actual key
                 var keySymbol = ConvertToKeySymbol(e);
                 connection.EnqueueMessage(new KeyEventMessage(true, keySymbol));
             }
@@ -88,8 +100,28 @@ namespace MarcusW.VncClient.Blazor.Services
 
             if (connection?.ConnectionState == ConnectionState.Connected)
             {
+                // Send the actual key up first
                 var keySymbol = ConvertToKeySymbol(e);
                 connection.EnqueueMessage(new KeyEventMessage(false, keySymbol));
+                
+                // Then send modifier key ups (in reverse order from key down)
+                // Note: Only send if this isn't the modifier key itself being released
+                if (e.MetaKey && e.Key != "Meta" && e.Key != "MetaLeft" && e.Key != "MetaRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(false, KeySymbol.Super_L));
+                }
+                if (e.ShiftKey && e.Key != "Shift" && e.Key != "ShiftLeft" && e.Key != "ShiftRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(false, KeySymbol.Shift_L));
+                }
+                if (e.AltKey && e.Key != "Alt" && e.Key != "AltLeft" && e.Key != "AltRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(false, KeySymbol.Alt_L));
+                }
+                if (e.CtrlKey && e.Key != "Control" && e.Key != "ControlLeft" && e.Key != "ControlRight")
+                {
+                    connection.EnqueueMessage(new KeyEventMessage(false, KeySymbol.Control_L));
+                }
             }
             
             return Task.CompletedTask;

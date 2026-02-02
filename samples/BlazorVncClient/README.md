@@ -98,19 +98,42 @@ https://localhost:5001/vnc_view?host=192.168.1.100&port=5900&user=vnc&password=p
 
 4. **Interact:**
    - Once connected, you can interact with the remote desktop using mouse and keyboard
-   - **Special Key Combinations**: System-level shortcuts are automatically captured and forwarded:
-     - `Alt+F4`, `Alt+Tab` - Windows management
-     - `Ctrl+Alt+Delete`, `Ctrl+Shift+Esc` - System functions
-     - `Win+L`, `Win+D`, `Win+R` - Windows shortcuts
-     - `Ctrl+Alt+T`, `Ctrl+Alt+Arrows` - Linux shortcuts
-     - `F11` - Remote fullscreen
-   - **Clipboard Integration**: Use `Ctrl+V` to paste into the remote session
-   - The connection information panel shows:
-     - Connection status and protocol version
-     - Security type used for authentication
-     - Desktop name and framebuffer size
-     - Active encoding types
-     - Error messages if connection fails
+   - **Click the canvas** to focus it (blue border shows when focused)
+   
+   **Keyboard Input:**
+   - Type normally - all regular keys work (letters, numbers, symbols, function keys)
+   - `Ctrl+V` / `Cmd+V` - Paste from clipboard
+   - `F11` - Fullscreen toggle sent to remote
+   - Most Ctrl+ combinations work
+   
+   **⌨️ Special Keys Menu:**
+   - Look for the **⌨️** floating button (starts in top-right corner)
+   - **Drag it anywhere** - click and drag to reposition if it's in the way
+   - **Click to expand** - shows menu with all available special key combinations
+   - Send `Ctrl+Alt+Delete`, `Alt+F4`, `Alt+Tab`, `Win+R`, and more
+   - Menu **auto-closes** after sending a key combo
+   - Includes Windows shortcuts (Win+R, Win+D, etc.) and Linux shortcuts (Ctrl+Alt+F1-F7)
+   
+   **Why the Special Keys Menu?**
+   - Your local OS intercepts shortcuts like `Ctrl+Alt+Delete` and `Win+R` before the browser sees them
+   - The menu programmatically sends these key combinations directly to the remote VNC server
+   - Similar to RDP Manager and other professional remote desktop tools
+   - Draggable design prevents blocking important screen areas
+   
+   **Clipboard Integration**: 
+   - Use `Ctrl+V` to paste into the remote session
+   - Copy operations from remote are automatically placed in your clipboard
+   
+   **Fullscreen Mode**: 
+   - Click fullscreen button for better keyboard capture
+   - Browser allows more keyboard access in fullscreen mode
+   
+   **Connection Information Panel:**
+   - Connection status and protocol version
+   - Security type used for authentication
+   - Desktop name and framebuffer size
+   - Active encoding types
+   - Error messages if connection fails
 
 ## Architecture
 
