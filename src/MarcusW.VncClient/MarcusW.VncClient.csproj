@@ -10,6 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
       <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.102" PrivateAssets="All" />
     </ItemGroup>

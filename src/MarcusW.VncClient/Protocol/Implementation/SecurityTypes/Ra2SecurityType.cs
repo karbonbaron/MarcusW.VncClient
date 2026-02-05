@@ -1,63 +1,68 @@
 using System;
+using System.Buffers.Binary;
+using System.IO;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using MarcusW.VncClient.Protocol.SecurityTypes;
 using MarcusW.VncClient.Security;
-using MarcusW.VncClient.Utils;
+using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Modes;
+using Org.BouncyCastle.Crypto.Parameters;
 
 namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
 {
     /// <summary>
-    /// A security type that implements RA2 (RSA-AES) authentication.
-    /// This provides RSA public key cryptography for secure authentication.
+    /// A security type that implements RA2 (RSA-AES) authentication according to the full RFB specification.
     /// </summary>
     /// <remarks>
-    /// <para><strong>⚠️ WARNING: This is a simplified, non-functional placeholder implementation!</strong></para>
-    /// <para>
-    /// The current implementation does NOT match the full RFB RA2 specification and will NOT work 
-    /// with real RealVNC servers. The full RA2 protocol requires:
-    /// </para>
-    /// <list type="number">
-    /// <item><description>Bidirectional RSA key exchange (client must also send its public key)</description></item>
-    /// <item><description>Mutual random number exchange (both sides generate and exchange 16-byte randoms)</description></item>
-    /// <item><description>Session key derivation using SHA1: ClientSessionKey = SHA1(ServerRandom || ClientRandom)</description></item>
-    /// <item><description>AES-EAX encryption for ALL subsequent messages (not available in standard .NET)</description></item>
-    /// <item><description>Hash verification: ServerHash and ClientHash exchange for mutual authentication</description></item>
-    /// <item><description>Subtype handling (username+password vs password-only modes)</description></item>
-    /// <item><description>Encrypted message framing: [2-byte length][encrypted message][16-byte MAC]</description></item>
-    /// </list>
-    /// <para>
-    /// Implementing the full RA2 specification requires AES-EAX mode, which is not available in 
-    /// System.Security.Cryptography and would require an external cryptography library such as 
-    /// BouncyCastle or a custom implementation.
-    /// </para>
-    /// <para>
-    /// This implementation is kept for API compatibility and potential future completion, but 
-    /// should NOT be used in production environments expecting real RealVNC server compatibility.
-    /// </para>
+    /// The RA2 security type provides robust authentication and encryption using:
+    /// - Bidirectional RSA key exchange for mutual authentication
+    /// - Random number exchange to derive session keys
+    /// - AES-EAX encryption for all subsequent protocol messages
+    /// - Hash verification to prevent man-in-the-middle attacks
     /// </remarks>
     public class Ra2SecurityType : ISecurityType
     {
         private readonly RfbConnectionContext _context;
+        private readonly ILogger<Ra2SecurityType> _logger;
+        private readonly bool _useSha256;
 
         /// <inheritdoc />
-        public byte Id => (byte)WellKnownSecurityType.RA2;
+        public byte Id { get; }
 
         /// <inheritdoc />
-        public string Name => "RA2";
+        public string Name { get; }
 
         /// <inheritdoc />
-        public int Priority => 70; // High priority due to RSA encryption
+        public int Priority => _useSha256 ? 90 : 70;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Ra2SecurityType"/>.
+        /// Initializes a new instance of the <see cref="Ra2SecurityType"/> for RA2 (SHA1).
         /// </summary>
         /// <param name="context">The connection context.</param>
-        public Ra2SecurityType(RfbConnectionContext context)
+        public Ra2SecurityType(RfbConnectionContext context) : this(context, false, (byte)WellKnownSecurityType.RA2, "RA2")
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Ra2SecurityType"/> with configurable hash algorithm.
+        /// </summary>
+        /// <param name="context">The connection context.</param>
+        /// <param name="useSha256">True to use SHA256 (RA2_256), false to use SHA1 (RA2).</param>
+        /// <param name="id">The security type ID.</param>
+        /// <param name="name">The security type name.</param>
+        protected Ra2SecurityType(RfbConnectionContext context, bool useSha256, byte id, string name)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = context.Connection.LoggerFactory.CreateLogger<Ra2SecurityType>();
+            _useSha256 = useSha256;
+            Id = id;
+            Name = name;
         }
 
         /// <inheritdoc />
@@ -66,186 +71,392 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             if (authenticationHandler == null)
                 throw new ArgumentNullException(nameof(authenticationHandler));
 
-            cancellationToken.ThrowIfCancellationRequested();
-
             ITransport transport = _context.Transport ?? throw new InvalidOperationException("Cannot access transport for authentication.");
+            Stream stream = transport.Stream;
 
-            // Step 1: Read server's RSA public key length (2 bytes)
-            var keyLengthBuffer = new byte[2];
-            await transport.Stream.ReadExactlyAsync(keyLengthBuffer, cancellationToken).ConfigureAwait(false);
-            ushort keyLength = (ushort)((keyLengthBuffer[0] << 8) | keyLengthBuffer[1]);
+            // Step 1: Read server's RSA public key
+            _logger.LogDebug("Reading server's RSA public key");
+            (RSA serverRsa, byte[] serverPublicKeyBytes) = await ReadRsaPublicKeyAsync(stream, cancellationToken).ConfigureAwait(false);
 
-            if (keyLength == 0 || keyLength > 8192) // Sanity check for key length
-                throw new InvalidOperationException($"Invalid RSA key length: {keyLength}");
+            // Step 2: Generate and send client's RSA public key
+            _logger.LogDebug("Generating and sending client's RSA public key");
+            using RSA clientRsa = RSA.Create(2048);
+            byte[] clientPublicKeyBytes = await SendRsaPublicKeyAsync(stream, clientRsa, cancellationToken).ConfigureAwait(false);
 
-            // Step 2: Read server's RSA public key
-            var publicKeyBuffer = new byte[keyLength];
-            await transport.Stream.ReadExactlyAsync(publicKeyBuffer, cancellationToken).ConfigureAwait(false);
+            // Step 3: Read server's encrypted random number
+            _logger.LogDebug("Reading server's encrypted random");
+            byte[] serverRandom = await ReadEncryptedRandomAsync(stream, clientRsa, cancellationToken).ConfigureAwait(false);
 
-            // Step 3: Read random challenge from server (usually 16 bytes)
-            var challengeBuffer = new byte[16];
-            await transport.Stream.ReadExactlyAsync(challengeBuffer, cancellationToken).ConfigureAwait(false);
+            // Step 4: Generate and send client's encrypted random number
+            _logger.LogDebug("Generating and sending client's encrypted random");
+            byte[] clientRandom = new byte[16];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(clientRandom);
 
-            // Step 4: Get credentials from authentication handler
+            await SendEncryptedRandomAsync(stream, serverRsa, clientRandom, cancellationToken).ConfigureAwait(false);
+
+            // Step 5: Derive session keys
+            _logger.LogDebug("Deriving AES session keys");
+            (byte[] clientSessionKey, byte[] serverSessionKey) = DeriveSessionKeys(serverRandom, clientRandom);
+
+            // Step 6: Switch to AES-EAX encrypted transport
+            var encryptedTransport = new AesEaxTransport(transport, clientSessionKey, serverSessionKey);
+            Stream encryptedStream = encryptedTransport.Stream;
+
+            // Step 7: Verify server hash
+            _logger.LogDebug("Verifying server hash");
+            await VerifyServerHashAsync(encryptedStream, serverPublicKeyBytes, clientPublicKeyBytes, cancellationToken).ConfigureAwait(false);
+
+            // Step 8: Send client hash
+            _logger.LogDebug("Sending client hash");
+            await SendClientHashAsync(encryptedStream, clientPublicKeyBytes, serverPublicKeyBytes, cancellationToken).ConfigureAwait(false);
+
+            // Step 9: Read subtype
+            _logger.LogDebug("Reading authentication subtype");
+            byte subtype = await ReadSubtypeAsync(encryptedStream, cancellationToken).ConfigureAwait(false);
+
+            // Step 10: Send credentials
+            _logger.LogDebug("Sending credentials");
             CredentialsAuthenticationInput input = await authenticationHandler
                 .ProvideAuthenticationInputAsync(_context.Connection, this, new CredentialsAuthenticationInputRequest()).ConfigureAwait(false);
 
-            // Step 5: Create and send encrypted response
-            byte[] encryptedResponse = await CreateRa2ResponseAsync(publicKeyBuffer, challengeBuffer, input.Username, input.Password, cancellationToken).ConfigureAwait(false);
+            await SendCredentialsAsync(encryptedStream, subtype, input.Username, input.Password, cancellationToken).ConfigureAwait(false);
 
-            // Step 6: Send encrypted response length (2 bytes)
-            var responseLengthBuffer = new byte[2];
-            responseLengthBuffer[0] = (byte)(encryptedResponse.Length >> 8);
-            responseLengthBuffer[1] = (byte)(encryptedResponse.Length & 0xFF);
-            await transport.Stream.WriteAsync(responseLengthBuffer, cancellationToken).ConfigureAwait(false);
+            // Clean up sensitive data
+            Array.Clear(serverRandom, 0, serverRandom.Length);
+            Array.Clear(clientRandom, 0, clientRandom.Length);
+            Array.Clear(clientSessionKey, 0, clientSessionKey.Length);
+            Array.Clear(serverSessionKey, 0, serverSessionKey.Length);
+            serverRsa.Dispose();
 
-            // Step 7: Send encrypted response
-            await transport.Stream.WriteAsync(encryptedResponse, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("RA2 authentication handshake completed");
 
-            return new AuthenticationResult();
+            // Return the encrypted transport - all subsequent messages will be encrypted
+            return new AuthenticationResult(encryptedTransport, expectSecurityResult: true);
         }
 
         /// <inheritdoc />
         public Task ReadServerInitExtensionAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        /// <summary>
-        /// Creates an encrypted RA2 response using RSA encryption.
-        /// </summary>
-        /// <param name="publicKeyData">The server's RSA public key data.</param>
-        /// <param name="challenge">The challenge from the server.</param>
-        /// <param name="username">The username for authentication.</param>
-        /// <param name="password">The password for authentication.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>The encrypted response to send to the server.</returns>
-        private static async Task<byte[]> CreateRa2ResponseAsync(byte[] publicKeyData, byte[] challenge, string username, string password, CancellationToken cancellationToken)
+        private async Task<(RSA rsa, byte[] publicKeyBytes)> ReadRsaPublicKeyAsync(Stream stream, CancellationToken cancellationToken)
         {
-            await Task.Yield(); // Make method async
-            cancellationToken.ThrowIfCancellationRequested();
+            // Read key length (4 bytes, big-endian)
+            byte[] keyLengthBuffer = new byte[4];
+            await stream.ReadExactlyAsync(keyLengthBuffer, cancellationToken).ConfigureAwait(false);
+            uint keyLengthBits = BinaryPrimitives.ReadUInt32BigEndian(keyLengthBuffer);
 
-            try
+            if (keyLengthBits < 1024 || keyLengthBits > 8192)
+                throw new InvalidOperationException($"Invalid RSA key length: {keyLengthBits} bits");
+
+            int keyLengthBytes = (int)Math.Ceiling(keyLengthBits / 8.0);
+
+            // Read modulus
+            byte[] modulus = new byte[keyLengthBytes];
+            await stream.ReadExactlyAsync(modulus, cancellationToken).ConfigureAwait(false);
+
+            // Read public exponent
+            byte[] exponent = new byte[keyLengthBytes];
+            await stream.ReadExactlyAsync(exponent, cancellationToken).ConfigureAwait(false);
+
+            // Build the public key bytes for hash verification (as sent by server)
+            byte[] publicKeyBytes = new byte[4 + keyLengthBytes * 2];
+            BinaryPrimitives.WriteUInt32BigEndian(publicKeyBytes, keyLengthBits);
+            modulus.CopyTo(publicKeyBytes, 4);
+            exponent.CopyTo(publicKeyBytes, 4 + keyLengthBytes);
+
+            // Import RSA parameters
+            var rsa = RSA.Create();
+            var rsaParams = new RSAParameters
             {
-                // Import RSA public key from server data
-                // Note: The exact format may vary depending on the VNC server implementation
-                // This assumes a simple format; you may need to adjust based on actual server behavior
-                using var rsa = RSA.Create();
-                
-                try
-                {
-                    // Try to import as RSA public key parameters
-                    // This is a simplified implementation - real RA2 may use different key formats
-                    rsa.ImportRSAPublicKey(publicKeyData, out _);
-                }
-                catch
-                {
-                    // If direct import fails, try alternative formats or create parameters manually
-                    // For now, create a minimal key for demonstration
-                    var rsaParams = new RSAParameters
-                    {
-                        Modulus = publicKeyData.Length >= 128 ? publicKeyData[..128] : publicKeyData,
-                        Exponent = new byte[] { 0x01, 0x00, 0x01 } // Standard exponent 65537
-                    };
-                    rsa.ImportParameters(rsaParams);
-                }
+                Modulus = modulus,
+                Exponent = TrimLeadingZeros(exponent)
+            };
+            rsa.ImportParameters(rsaParams);
 
-                // Prepare the data to encrypt: challenge + username + password
-                var credentialsData = PrepareCredentialsData(challenge, username, password);
-
-                // Encrypt using RSA with OAEP padding (secure padding scheme)
-                byte[] encryptedData = rsa.Encrypt(credentialsData, RSAEncryptionPadding.OaepSHA256);
-
-                // Clear sensitive data
-                Array.Clear(credentialsData, 0, credentialsData.Length);
-
-                return encryptedData;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Failed to create RA2 encrypted response.", ex);
-            }
+            return (rsa, publicKeyBytes);
         }
 
-        /// <summary>
-        /// Prepares the credentials data for encryption.
-        /// </summary>
-        /// <param name="challenge">The challenge from the server.</param>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
-        /// <returns>The prepared data for encryption.</returns>
-        private static byte[] PrepareCredentialsData(byte[] challenge, string username, string password)
+        private async Task<byte[]> SendRsaPublicKeyAsync(Stream stream, RSA rsa, CancellationToken cancellationToken)
         {
-            // Format: challenge + username_length + username + password_length + password
-            var usernameBytes = Encoding.UTF8.GetBytes(username ?? string.Empty);
-            var passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+            RSAParameters parameters = rsa.ExportParameters(false);
+            byte[] modulus = parameters.Modulus!;
+            byte[] exponent = PadToLength(parameters.Exponent!, modulus.Length);
 
-            var data = new byte[challenge.Length + 1 + usernameBytes.Length + 1 + passwordBytes.Length];
-            int offset = 0;
+            uint keyLengthBits = (uint)(modulus.Length * 8);
 
-            // Copy challenge
-            challenge.CopyTo(data, offset);
-            offset += challenge.Length;
+            // Build public key bytes
+            byte[] publicKeyBytes = new byte[4 + modulus.Length * 2];
+            BinaryPrimitives.WriteUInt32BigEndian(publicKeyBytes, keyLengthBits);
+            modulus.CopyTo(publicKeyBytes, 4);
+            exponent.CopyTo(publicKeyBytes, 4 + modulus.Length);
 
-            // Add username length and data
-            data[offset++] = (byte)usernameBytes.Length;
-            usernameBytes.CopyTo(data, offset);
-            offset += usernameBytes.Length;
+            // Send to server
+            await stream.WriteAsync(publicKeyBytes, cancellationToken).ConfigureAwait(false);
 
-            // Add password length and data
-            data[offset++] = (byte)passwordBytes.Length;
-            passwordBytes.CopyTo(data, offset);
+            return publicKeyBytes;
+        }
 
-            // Clear sensitive arrays
-            Array.Clear(passwordBytes, 0, passwordBytes.Length);
+        private async Task<byte[]> ReadEncryptedRandomAsync(Stream stream, RSA clientRsa, CancellationToken cancellationToken)
+        {
+            // Read length (2 bytes, big-endian)
+            byte[] lengthBuffer = new byte[2];
+            await stream.ReadExactlyAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
+            ushort length = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
 
-            return data;
+            // Read encrypted random
+            byte[] encryptedRandom = new byte[length];
+            await stream.ReadExactlyAsync(encryptedRandom, cancellationToken).ConfigureAwait(false);
+
+            // Decrypt with client's private key
+            byte[] serverRandom = clientRsa.Decrypt(encryptedRandom, RSAEncryptionPadding.Pkcs1);
+
+            if (serverRandom.Length != 16)
+                throw new InvalidOperationException($"Server random must be 16 bytes, got {serverRandom.Length}");
+
+            return serverRandom;
+        }
+
+        private async Task SendEncryptedRandomAsync(Stream stream, RSA serverRsa, byte[] clientRandom, CancellationToken cancellationToken)
+        {
+            // Encrypt client random with server's public key
+            byte[] encryptedRandom = serverRsa.Encrypt(clientRandom, RSAEncryptionPadding.Pkcs1);
+
+            // Send length (2 bytes, big-endian)
+            byte[] lengthBuffer = new byte[2];
+            BinaryPrimitives.WriteUInt16BigEndian(lengthBuffer, (ushort)encryptedRandom.Length);
+            await stream.WriteAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
+
+            // Send encrypted random
+            await stream.WriteAsync(encryptedRandom, cancellationToken).ConfigureAwait(false);
+        }
+
+        private (byte[] clientKey, byte[] serverKey) DeriveSessionKeys(byte[] serverRandom, byte[] clientRandom)
+        {
+            // Concatenate randoms
+            byte[] serverClientConcat = new byte[32];
+            byte[] clientServerConcat = new byte[32];
+            serverRandom.CopyTo(serverClientConcat, 0);
+            clientRandom.CopyTo(serverClientConcat, 16);
+            clientRandom.CopyTo(clientServerConcat, 0);
+            serverRandom.CopyTo(clientServerConcat, 16);
+
+            // Derive keys using appropriate hash algorithm
+            byte[] clientSessionKey;
+            byte[] serverSessionKey;
+
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                byte[] clientHash = sha256.ComputeHash(serverClientConcat);
+                byte[] serverHash = sha256.ComputeHash(clientServerConcat);
+                clientSessionKey = clientHash[..16]; // First 16 bytes
+                serverSessionKey = serverHash[..16];
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                byte[] clientHash = sha1.ComputeHash(serverClientConcat);
+                byte[] serverHash = sha1.ComputeHash(clientServerConcat);
+                clientSessionKey = clientHash[..16]; // First 16 bytes
+                serverSessionKey = serverHash[..16];
+            }
+
+            Array.Clear(serverClientConcat, 0, serverClientConcat.Length);
+            Array.Clear(clientServerConcat, 0, clientServerConcat.Length);
+
+            return (clientSessionKey, serverSessionKey);
+        }
+
+        private async Task VerifyServerHashAsync(Stream encryptedStream, byte[] serverPublicKey, byte[] clientPublicKey, CancellationToken cancellationToken)
+        {
+            // Read encrypted server hash (should be 20 or 32 bytes depending on hash algorithm)
+            int hashSize = _useSha256 ? 32 : 20;
+            byte[] encryptedServerHash = new byte[hashSize];
+            await encryptedStream.ReadExactlyAsync(encryptedServerHash, cancellationToken).ConfigureAwait(false);
+
+            // Compute expected server hash: SHA(ServerPublicKey || ClientPublicKey)
+            byte[] combined = new byte[serverPublicKey.Length + clientPublicKey.Length];
+            serverPublicKey.CopyTo(combined, 0);
+            clientPublicKey.CopyTo(combined, serverPublicKey.Length);
+
+            byte[] expectedServerHash;
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                expectedServerHash = sha256.ComputeHash(combined);
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                expectedServerHash = sha1.ComputeHash(combined);
+            }
+
+            // Verify
+            if (!AreEqual(encryptedServerHash, expectedServerHash))
+                throw new AuthenticationException("Server hash verification failed - possible man-in-the-middle attack");
+        }
+
+        private async Task SendClientHashAsync(Stream encryptedStream, byte[] clientPublicKey, byte[] serverPublicKey, CancellationToken cancellationToken)
+        {
+            // Compute client hash: SHA(ClientPublicKey || ServerPublicKey)
+            byte[] combined = new byte[clientPublicKey.Length + serverPublicKey.Length];
+            clientPublicKey.CopyTo(combined, 0);
+            serverPublicKey.CopyTo(combined, clientPublicKey.Length);
+
+            byte[] clientHash;
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                clientHash = sha256.ComputeHash(combined);
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                clientHash = sha1.ComputeHash(combined);
+            }
+
+            // Send encrypted client hash
+            await encryptedStream.WriteAsync(clientHash, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<byte> ReadSubtypeAsync(Stream encryptedStream, CancellationToken cancellationToken)
+        {
+            byte[] subtypeBuffer = new byte[1];
+            await encryptedStream.ReadExactlyAsync(subtypeBuffer, cancellationToken).ConfigureAwait(false);
+            return subtypeBuffer[0];
+        }
+
+        private async Task SendCredentialsAsync(Stream encryptedStream, byte subtype, string username, string password, CancellationToken cancellationToken)
+        {
+            byte[] credentialsMessage;
+
+            if (subtype == 1) // Username + Password
+            {
+                byte[] usernameBytes = Encoding.UTF8.GetBytes(username ?? string.Empty);
+                byte[] passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+
+                if (usernameBytes.Length > 255)
+                    throw new ArgumentException("Username too long (max 255 bytes UTF-8)", nameof(username));
+                if (passwordBytes.Length > 255)
+                    throw new ArgumentException("Password too long (max 255 bytes UTF-8)", nameof(password));
+
+                credentialsMessage = new byte[1 + usernameBytes.Length + 1 + passwordBytes.Length];
+                int offset = 0;
+                credentialsMessage[offset++] = (byte)usernameBytes.Length;
+                usernameBytes.CopyTo(credentialsMessage, offset);
+                offset += usernameBytes.Length;
+                credentialsMessage[offset++] = (byte)passwordBytes.Length;
+                passwordBytes.CopyTo(credentialsMessage, offset);
+
+                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+            }
+            else if (subtype == 2) // Password only
+            {
+                byte[] passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+
+                if (passwordBytes.Length > 255)
+                    throw new ArgumentException("Password too long (max 255 bytes UTF-8)", nameof(password));
+
+                credentialsMessage = new byte[1 + passwordBytes.Length];
+                credentialsMessage[0] = (byte)passwordBytes.Length;
+                passwordBytes.CopyTo(credentialsMessage, 1);
+
+                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Invalid RA2 subtype: {subtype}");
+            }
+
+            // Send encrypted credentials
+            await encryptedStream.WriteAsync(credentialsMessage, cancellationToken).ConfigureAwait(false);
+
+            Array.Clear(credentialsMessage, 0, credentialsMessage.Length);
+        }
+
+        private static byte[] TrimLeadingZeros(byte[] data)
+        {
+            int firstNonZero = 0;
+            while (firstNonZero < data.Length && data[firstNonZero] == 0)
+                firstNonZero++;
+
+            if (firstNonZero == 0)
+                return data;
+
+            byte[] trimmed = new byte[data.Length - firstNonZero];
+            Array.Copy(data, firstNonZero, trimmed, 0, trimmed.Length);
+            return trimmed;
+        }
+
+        private static byte[] PadToLength(byte[] data, int length)
+        {
+            if (data.Length == length)
+                return data;
+
+            byte[] padded = new byte[length];
+            int padding = length - data.Length;
+            Array.Copy(data, 0, padded, padding, data.Length);
+            return padded;
+        }
+
+        private static bool AreEqual(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+                return false;
+
+            int result = 0;
+            for (int i = 0; i < a.Length; i++)
+                result |= a[i] ^ b[i];
+
+            return result == 0;
         }
     }
 
     /// <summary>
-    /// A security type that implements RA2ne (RSA-AES without encryption) authentication.
-    /// This provides RSA authentication but without transport encryption.
+    /// A security type that implements RA2ne (RSA-AES without transport encryption) authentication.
     /// </summary>
     /// <remarks>
-    /// <para><strong>⚠️ WARNING: This is a simplified, non-functional placeholder implementation!</strong></para>
-    /// <para>
-    /// The current implementation does NOT match the full RFB RA2ne specification and will NOT work 
-    /// with real RealVNC servers. RA2ne follows the same complex protocol as RA2, including:
-    /// </para>
-    /// <list type="bullet">
-    /// <item><description>Bidirectional RSA key exchange</description></item>
-    /// <item><description>Mutual random number exchange</description></item>
-    /// <item><description>Hash verification for mutual authentication</description></item>
-    /// <item><description>Encrypted credential exchange during handshake</description></item>
-    /// </list>
-    /// <para>
-    /// The only difference from RA2 is that RA2ne does NOT encrypt subsequent protocol messages 
-    /// after the security handshake completes, whereas RA2 requires AES-EAX encryption for all 
-    /// messages after authentication.
-    /// </para>
-    /// <para>
-    /// This implementation is kept for API compatibility and potential future completion, but 
-    /// should NOT be used in production environments expecting real RealVNC server compatibility.
-    /// </para>
+    /// RA2ne follows the same authentication protocol as RA2, including RSA key exchange,
+    /// random number exchange, and hash verification. However, after the security handshake
+    /// completes, subsequent protocol messages are NOT encrypted (only the handshake itself uses encryption).
     /// </remarks>
     public class Ra2neSecurityType : ISecurityType
     {
         private readonly RfbConnectionContext _context;
+        private readonly ILogger<Ra2neSecurityType> _logger;
+        private readonly bool _useSha256;
 
         /// <inheritdoc />
-        public byte Id => (byte)WellKnownSecurityType.RA2ne;
+        public byte Id { get; }
 
         /// <inheritdoc />
-        public string Name => "RA2ne";
+        public string Name { get; }
 
         /// <inheritdoc />
-        public int Priority => 50; // Lower than RA2 due to lack of encryption
+        public int Priority => _useSha256 ? 60 : 50;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Ra2neSecurityType"/>.
+        /// Initializes a new instance of the <see cref="Ra2neSecurityType"/> for RA2ne (SHA1).
         /// </summary>
         /// <param name="context">The connection context.</param>
-        public Ra2neSecurityType(RfbConnectionContext context)
+        public Ra2neSecurityType(RfbConnectionContext context) : this(context, false, (byte)WellKnownSecurityType.RA2ne, "RA2ne")
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Ra2neSecurityType"/> with configurable hash algorithm.
+        /// </summary>
+        /// <param name="context">The connection context.</param>
+        /// <param name="useSha256">True to use SHA256 (RA2ne_256), false to use SHA1 (RA2ne).</param>
+        /// <param name="id">The security type ID.</param>
+        /// <param name="name">The security type name.</param>
+        protected Ra2neSecurityType(RfbConnectionContext context, bool useSha256, byte id, string name)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = context.Connection.LoggerFactory.CreateLogger<Ra2neSecurityType>();
+            _useSha256 = useSha256;
+            Id = id;
+            Name = name;
         }
 
         /// <inheritdoc />
@@ -254,129 +465,352 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             if (authenticationHandler == null)
                 throw new ArgumentNullException(nameof(authenticationHandler));
 
-            cancellationToken.ThrowIfCancellationRequested();
-
             ITransport transport = _context.Transport ?? throw new InvalidOperationException("Cannot access transport for authentication.");
+            Stream stream = transport.Stream;
 
-            // RA2ne follows similar process to RA2 but without establishing encryption
-            // Step 1: Read server's RSA public key length (2 bytes)
-            var keyLengthBuffer = new byte[2];
-            await transport.Stream.ReadExactlyAsync(keyLengthBuffer, cancellationToken).ConfigureAwait(false);
-            ushort keyLength = (ushort)((keyLengthBuffer[0] << 8) | keyLengthBuffer[1]);
+            // RA2ne follows the same protocol as RA2 but doesn't encrypt subsequent messages
+            // Step 1: Read server's RSA public key
+            _logger.LogDebug("Reading server's RSA public key");
+            (RSA serverRsa, byte[] serverPublicKeyBytes) = await ReadRsaPublicKeyAsync(stream, cancellationToken).ConfigureAwait(false);
 
-            if (keyLength == 0 || keyLength > 8192)
-                throw new InvalidOperationException($"Invalid RSA key length: {keyLength}");
+            // Step 2: Generate and send client's RSA public key
+            _logger.LogDebug("Generating and sending client's RSA public key");
+            using RSA clientRsa = RSA.Create(2048);
+            byte[] clientPublicKeyBytes = await SendRsaPublicKeyAsync(stream, clientRsa, cancellationToken).ConfigureAwait(false);
 
-            // Step 2: Read server's RSA public key
-            var publicKeyBuffer = new byte[keyLength];
-            await transport.Stream.ReadExactlyAsync(publicKeyBuffer, cancellationToken).ConfigureAwait(false);
+            // Step 3: Read server's encrypted random number
+            _logger.LogDebug("Reading server's encrypted random");
+            byte[] serverRandom = await ReadEncryptedRandomAsync(stream, clientRsa, cancellationToken).ConfigureAwait(false);
 
-            // Step 3: Read random challenge from server
-            var challengeBuffer = new byte[16];
-            await transport.Stream.ReadExactlyAsync(challengeBuffer, cancellationToken).ConfigureAwait(false);
+            // Step 4: Generate and send client's encrypted random number
+            _logger.LogDebug("Generating and sending client's encrypted random");
+            byte[] clientRandom = new byte[16];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(clientRandom);
 
-            // Step 4: Get credentials
+            await SendEncryptedRandomAsync(stream, serverRsa, clientRandom, cancellationToken).ConfigureAwait(false);
+
+            // Step 5: Derive session keys (used only for handshake verification)
+            _logger.LogDebug("Deriving session keys for handshake verification");
+            (byte[] clientSessionKey, byte[] serverSessionKey) = DeriveSessionKeys(serverRandom, clientRandom);
+
+            // Step 6: Create temporary encrypted transport for handshake verification
+            var tempEncryptedTransport = new AesEaxTransport(transport, clientSessionKey, serverSessionKey);
+            Stream encryptedStream = tempEncryptedTransport.Stream;
+
+            // Step 7: Verify server hash
+            _logger.LogDebug("Verifying server hash");
+            await VerifyServerHashAsync(encryptedStream, serverPublicKeyBytes, clientPublicKeyBytes, cancellationToken).ConfigureAwait(false);
+
+            // Step 8: Send client hash
+            _logger.LogDebug("Sending client hash");
+            await SendClientHashAsync(encryptedStream, clientPublicKeyBytes, serverPublicKeyBytes, cancellationToken).ConfigureAwait(false);
+
+            // Step 9: Read subtype
+            _logger.LogDebug("Reading authentication subtype");
+            byte subtype = await ReadSubtypeAsync(encryptedStream, cancellationToken).ConfigureAwait(false);
+
+            // Step 10: Send credentials
+            _logger.LogDebug("Sending credentials");
             CredentialsAuthenticationInput input = await authenticationHandler
                 .ProvideAuthenticationInputAsync(_context.Connection, this, new CredentialsAuthenticationInputRequest()).ConfigureAwait(false);
 
-            // Step 5: Create signed response (authentication only, no encryption)
-            byte[] signedResponse = await CreateRa2neResponseAsync(publicKeyBuffer, challengeBuffer, input.Username, input.Password, cancellationToken).ConfigureAwait(false);
+            await SendCredentialsAsync(encryptedStream, subtype, input.Username, input.Password, cancellationToken).ConfigureAwait(false);
 
-            // Step 6: Send response length
-            var responseLengthBuffer = new byte[2];
-            responseLengthBuffer[0] = (byte)(signedResponse.Length >> 8);
-            responseLengthBuffer[1] = (byte)(signedResponse.Length & 0xFF);
-            await transport.Stream.WriteAsync(responseLengthBuffer, cancellationToken).ConfigureAwait(false);
+            // Clean up sensitive data
+            Array.Clear(serverRandom, 0, serverRandom.Length);
+            Array.Clear(clientRandom, 0, clientRandom.Length);
+            Array.Clear(clientSessionKey, 0, clientSessionKey.Length);
+            Array.Clear(serverSessionKey, 0, serverSessionKey.Length);
+            serverRsa.Dispose();
 
-            // Step 7: Send signed response
-            await transport.Stream.WriteAsync(signedResponse, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("RA2ne authentication handshake completed (no transport encryption)");
 
-            // RA2ne provides authentication but no transport encryption
+            // Return null tunnel transport - subsequent messages are NOT encrypted
             return new AuthenticationResult(tunnelTransport: null, expectSecurityResult: true);
         }
 
         /// <inheritdoc />
         public Task ReadServerInitExtensionAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
-        /// <summary>
-        /// Creates a signed RA2ne response using RSA signing (without establishing encryption).
-        /// </summary>
-        /// <param name="publicKeyData">The server's RSA public key data.</param>
-        /// <param name="challenge">The challenge from the server.</param>
-        /// <param name="username">The username for authentication.</param>
-        /// <param name="password">The password for authentication.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>The signed response to send to the server.</returns>
-        private static async Task<byte[]> CreateRa2neResponseAsync(byte[] publicKeyData, byte[] challenge, string username, string password, CancellationToken cancellationToken)
+        // Shared helper methods (same as Ra2SecurityType)
+        private async Task<(RSA rsa, byte[] publicKeyBytes)> ReadRsaPublicKeyAsync(Stream stream, CancellationToken cancellationToken)
         {
-            await Task.Yield();
-            cancellationToken.ThrowIfCancellationRequested();
+            byte[] keyLengthBuffer = new byte[4];
+            await stream.ReadExactlyAsync(keyLengthBuffer, cancellationToken).ConfigureAwait(false);
+            uint keyLengthBits = BinaryPrimitives.ReadUInt32BigEndian(keyLengthBuffer);
 
-            try
+            if (keyLengthBits < 1024 || keyLengthBits > 8192)
+                throw new InvalidOperationException($"Invalid RSA key length: {keyLengthBits} bits");
+
+            int keyLengthBytes = (int)Math.Ceiling(keyLengthBits / 8.0);
+
+            byte[] modulus = new byte[keyLengthBytes];
+            await stream.ReadExactlyAsync(modulus, cancellationToken).ConfigureAwait(false);
+
+            byte[] exponent = new byte[keyLengthBytes];
+            await stream.ReadExactlyAsync(exponent, cancellationToken).ConfigureAwait(false);
+
+            byte[] publicKeyBytes = new byte[4 + keyLengthBytes * 2];
+            BinaryPrimitives.WriteUInt32BigEndian(publicKeyBytes, keyLengthBits);
+            modulus.CopyTo(publicKeyBytes, 4);
+            exponent.CopyTo(publicKeyBytes, 4 + keyLengthBytes);
+
+            var rsa = RSA.Create();
+            var rsaParams = new RSAParameters
             {
-                using var rsa = RSA.Create();
-                
-                try
-                {
-                    rsa.ImportRSAPublicKey(publicKeyData, out _);
-                }
-                catch
-                {
-                    var rsaParams = new RSAParameters
-                    {
-                        Modulus = publicKeyData.Length >= 128 ? publicKeyData[..128] : publicKeyData,
-                        Exponent = new byte[] { 0x01, 0x00, 0x01 }
-                    };
-                    rsa.ImportParameters(rsaParams);
-                }
+                Modulus = modulus,
+                Exponent = TrimLeadingZeros(exponent)
+            };
+            rsa.ImportParameters(rsaParams);
 
-                // For RA2ne, we only sign the credentials for authentication verification
-                var credentialsData = PrepareCredentialsData(challenge, username, password);
-                
-                // Create hash and encrypt it (this serves as a signature with public key)
-                using var sha256 = SHA256.Create();
-                byte[] hash = sha256.ComputeHash(credentialsData);
-                byte[] signedHash = rsa.Encrypt(hash, RSAEncryptionPadding.OaepSHA256);
-
-                Array.Clear(credentialsData, 0, credentialsData.Length);
-                Array.Clear(hash, 0, hash.Length);
-
-                return signedHash;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException("Failed to create RA2ne signed response.", ex);
-            }
+            return (rsa, publicKeyBytes);
         }
 
-        /// <summary>
-        /// Prepares the credentials data for signing.
-        /// </summary>
-        /// <param name="challenge">The challenge from the server.</param>
-        /// <param name="username">The username.</param>
-        /// <param name="password">The password.</param>
-        /// <returns>The prepared data for signing.</returns>
-        private static byte[] PrepareCredentialsData(byte[] challenge, string username, string password)
+        private async Task<byte[]> SendRsaPublicKeyAsync(Stream stream, RSA rsa, CancellationToken cancellationToken)
         {
-            var usernameBytes = Encoding.UTF8.GetBytes(username ?? string.Empty);
-            var passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+            RSAParameters parameters = rsa.ExportParameters(false);
+            byte[] modulus = parameters.Modulus!;
+            byte[] exponent = PadToLength(parameters.Exponent!, modulus.Length);
 
-            var data = new byte[challenge.Length + 1 + usernameBytes.Length + 1 + passwordBytes.Length];
-            int offset = 0;
+            uint keyLengthBits = (uint)(modulus.Length * 8);
 
-            challenge.CopyTo(data, offset);
-            offset += challenge.Length;
+            byte[] publicKeyBytes = new byte[4 + modulus.Length * 2];
+            BinaryPrimitives.WriteUInt32BigEndian(publicKeyBytes, keyLengthBits);
+            modulus.CopyTo(publicKeyBytes, 4);
+            exponent.CopyTo(publicKeyBytes, 4 + modulus.Length);
 
-            data[offset++] = (byte)usernameBytes.Length;
-            usernameBytes.CopyTo(data, offset);
-            offset += usernameBytes.Length;
+            await stream.WriteAsync(publicKeyBytes, cancellationToken).ConfigureAwait(false);
 
-            data[offset++] = (byte)passwordBytes.Length;
-            passwordBytes.CopyTo(data, offset);
+            return publicKeyBytes;
+        }
 
-            Array.Clear(passwordBytes, 0, passwordBytes.Length);
+        private async Task<byte[]> ReadEncryptedRandomAsync(Stream stream, RSA clientRsa, CancellationToken cancellationToken)
+        {
+            byte[] lengthBuffer = new byte[2];
+            await stream.ReadExactlyAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
+            ushort length = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
 
-            return data;
+            byte[] encryptedRandom = new byte[length];
+            await stream.ReadExactlyAsync(encryptedRandom, cancellationToken).ConfigureAwait(false);
+
+            byte[] serverRandom = clientRsa.Decrypt(encryptedRandom, RSAEncryptionPadding.Pkcs1);
+
+            if (serverRandom.Length != 16)
+                throw new InvalidOperationException($"Server random must be 16 bytes, got {serverRandom.Length}");
+
+            return serverRandom;
+        }
+
+        private async Task SendEncryptedRandomAsync(Stream stream, RSA serverRsa, byte[] clientRandom, CancellationToken cancellationToken)
+        {
+            byte[] encryptedRandom = serverRsa.Encrypt(clientRandom, RSAEncryptionPadding.Pkcs1);
+
+            byte[] lengthBuffer = new byte[2];
+            BinaryPrimitives.WriteUInt16BigEndian(lengthBuffer, (ushort)encryptedRandom.Length);
+            await stream.WriteAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
+
+            await stream.WriteAsync(encryptedRandom, cancellationToken).ConfigureAwait(false);
+        }
+
+        private (byte[] clientKey, byte[] serverKey) DeriveSessionKeys(byte[] serverRandom, byte[] clientRandom)
+        {
+            byte[] serverClientConcat = new byte[32];
+            byte[] clientServerConcat = new byte[32];
+            serverRandom.CopyTo(serverClientConcat, 0);
+            clientRandom.CopyTo(serverClientConcat, 16);
+            clientRandom.CopyTo(clientServerConcat, 0);
+            serverRandom.CopyTo(clientServerConcat, 16);
+
+            byte[] clientSessionKey;
+            byte[] serverSessionKey;
+
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                byte[] clientHash = sha256.ComputeHash(serverClientConcat);
+                byte[] serverHash = sha256.ComputeHash(clientServerConcat);
+                clientSessionKey = clientHash[..16];
+                serverSessionKey = serverHash[..16];
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                byte[] clientHash = sha1.ComputeHash(serverClientConcat);
+                byte[] serverHash = sha1.ComputeHash(clientServerConcat);
+                clientSessionKey = clientHash[..16];
+                serverSessionKey = serverHash[..16];
+            }
+
+            Array.Clear(serverClientConcat, 0, serverClientConcat.Length);
+            Array.Clear(clientServerConcat, 0, clientServerConcat.Length);
+
+            return (clientSessionKey, serverSessionKey);
+        }
+
+        private async Task VerifyServerHashAsync(Stream encryptedStream, byte[] serverPublicKey, byte[] clientPublicKey, CancellationToken cancellationToken)
+        {
+            // Read encrypted server hash (should be 20 or 32 bytes depending on hash algorithm)
+            int hashSize = _useSha256 ? 32 : 20;
+            byte[] encryptedServerHash = new byte[hashSize];
+            await encryptedStream.ReadExactlyAsync(encryptedServerHash, cancellationToken).ConfigureAwait(false);
+
+            // Compute expected server hash: SHA(ServerPublicKey || ClientPublicKey)
+            byte[] combined = new byte[serverPublicKey.Length + clientPublicKey.Length];
+            serverPublicKey.CopyTo(combined, 0);
+            clientPublicKey.CopyTo(combined, serverPublicKey.Length);
+
+            byte[] expectedServerHash;
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                expectedServerHash = sha256.ComputeHash(combined);
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                expectedServerHash = sha1.ComputeHash(combined);
+            }
+
+            // Verify
+            if (!AreEqual(encryptedServerHash, expectedServerHash))
+                throw new AuthenticationException("Server hash verification failed - possible man-in-the-middle attack");
+        }
+
+        private async Task SendClientHashAsync(Stream encryptedStream, byte[] clientPublicKey, byte[] serverPublicKey, CancellationToken cancellationToken)
+        {
+            // Compute client hash: SHA(ClientPublicKey || ServerPublicKey)
+            byte[] combined = new byte[clientPublicKey.Length + serverPublicKey.Length];
+            clientPublicKey.CopyTo(combined, 0);
+            serverPublicKey.CopyTo(combined, clientPublicKey.Length);
+
+            byte[] clientHash;
+            if (_useSha256)
+            {
+                using var sha256 = SHA256.Create();
+                clientHash = sha256.ComputeHash(combined);
+            }
+            else
+            {
+                using var sha1 = SHA1.Create();
+                clientHash = sha1.ComputeHash(combined);
+            }
+
+            // Send encrypted client hash
+            await encryptedStream.WriteAsync(clientHash, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<byte> ReadSubtypeAsync(Stream encryptedStream, CancellationToken cancellationToken)
+        {
+            byte[] subtypeBuffer = new byte[1];
+            await encryptedStream.ReadExactlyAsync(subtypeBuffer, cancellationToken).ConfigureAwait(false);
+            return subtypeBuffer[0];
+        }
+
+        private async Task SendCredentialsAsync(Stream encryptedStream, byte subtype, string username, string password, CancellationToken cancellationToken)
+        {
+            byte[] credentialsMessage;
+
+            if (subtype == 1)
+            {
+                byte[] usernameBytes = Encoding.UTF8.GetBytes(username ?? string.Empty);
+                byte[] passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+
+                if (usernameBytes.Length > 255)
+                    throw new ArgumentException("Username too long (max 255 bytes UTF-8)", nameof(username));
+                if (passwordBytes.Length > 255)
+                    throw new ArgumentException("Password too long (max 255 bytes UTF-8)", nameof(password));
+
+                credentialsMessage = new byte[1 + usernameBytes.Length + 1 + passwordBytes.Length];
+                int offset = 0;
+                credentialsMessage[offset++] = (byte)usernameBytes.Length;
+                usernameBytes.CopyTo(credentialsMessage, offset);
+                offset += usernameBytes.Length;
+                credentialsMessage[offset++] = (byte)passwordBytes.Length;
+                passwordBytes.CopyTo(credentialsMessage, offset);
+
+                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+            }
+            else if (subtype == 2)
+            {
+                byte[] passwordBytes = Encoding.UTF8.GetBytes(password ?? string.Empty);
+
+                if (passwordBytes.Length > 255)
+                    throw new ArgumentException("Password too long (max 255 bytes UTF-8)", nameof(password));
+
+                credentialsMessage = new byte[1 + passwordBytes.Length];
+                credentialsMessage[0] = (byte)passwordBytes.Length;
+                passwordBytes.CopyTo(credentialsMessage, 1);
+
+                Array.Clear(passwordBytes, 0, passwordBytes.Length);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Invalid RA2ne subtype: {subtype}");
+            }
+
+            await encryptedStream.WriteAsync(credentialsMessage, cancellationToken).ConfigureAwait(false);
+
+            Array.Clear(credentialsMessage, 0, credentialsMessage.Length);
+        }
+
+        private static byte[] TrimLeadingZeros(byte[] data)
+        {
+            int firstNonZero = 0;
+            while (firstNonZero < data.Length && data[firstNonZero] == 0)
+                firstNonZero++;
+
+            if (firstNonZero == 0)
+                return data;
+
+            byte[] trimmed = new byte[data.Length - firstNonZero];
+            Array.Copy(data, firstNonZero, trimmed, 0, trimmed.Length);
+            return trimmed;
+        }
+
+        private static byte[] PadToLength(byte[] data, int length)
+        {
+            if (data.Length == length)
+                return data;
+
+            byte[] padded = new byte[length];
+            int padding = length - data.Length;
+            Array.Copy(data, 0, padded, padding, data.Length);
+            return padded;
+        }
+
+        private static bool AreEqual(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+                return false;
+
+            int result = 0;
+            for (int i = 0; i < a.Length; i++)
+                result |= a[i] ^ b[i];
+
+            return result == 0;
+        }
+    }
+
+    /// <summary>
+    /// RSA-AES-256 security type (uses SHA256 instead of SHA1).
+    /// </summary>
+    public class Ra2_256SecurityType : Ra2SecurityType
+    {
+        public Ra2_256SecurityType(RfbConnectionContext context)
+            : base(context, true, (byte)WellKnownSecurityType.RA2_256, "RA2-256")
+        {
+        }
+    }
+
+    /// <summary>
+    /// RSA-AES-256 unencrypted security type (uses SHA256 instead of SHA1).
+    /// </summary>
+    public class Ra2ne_256SecurityType : Ra2neSecurityType
+    {
+        public Ra2ne_256SecurityType(RfbConnectionContext context)
+            : base(context, true, (byte)WellKnownSecurityType.RA2ne_256, "RA2ne-256")
+        {
         }
     }
 }
