@@ -232,6 +232,14 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
 
         private (byte[] clientKey, byte[] serverKey) DeriveSessionKeys(byte[] serverRandom, byte[] clientRandom)
         {
+            _logger.LogDebug("Deriving session keys");
+            var msg = $"[RA2] Server random: {BitConverter.ToString(serverRandom).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
+            msg = $"[RA2] Client random: {BitConverter.ToString(clientRandom).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
+
             // Concatenate randoms
             byte[] serverClientConcat = new byte[32];
             byte[] clientServerConcat = new byte[32];
@@ -239,6 +247,13 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             clientRandom.CopyTo(serverClientConcat, 16);
             clientRandom.CopyTo(clientServerConcat, 0);
             serverRandom.CopyTo(clientServerConcat, 16);
+
+            msg = $"[RA2] For client key: {BitConverter.ToString(serverClientConcat).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
+            msg = $"[RA2] For server key: {BitConverter.ToString(clientServerConcat).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
 
             // Derive keys using appropriate hash algorithm
             byte[] clientSessionKey;
@@ -260,6 +275,13 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 clientSessionKey = clientHash[..16]; // First 16 bytes
                 serverSessionKey = serverHash[..16];
             }
+
+            msg = $"[RA2] Client session key: {BitConverter.ToString(clientSessionKey).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
+            msg = $"[RA2] Server session key: {BitConverter.ToString(serverSessionKey).Replace("-", " ")}";
+            Console.WriteLine(msg);
+            System.Diagnostics.Debug.WriteLine(msg);
 
             Array.Clear(serverClientConcat, 0, serverClientConcat.Length);
             Array.Clear(clientServerConcat, 0, clientServerConcat.Length);
