@@ -26,13 +26,14 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
         private const int MacSize = 16;
         private const int NonceSize = 16;
         
-        private static void LogBytes(string label, byte[] data)
-        {
-            var hex = BitConverter.ToString(data).Replace("-", " ");
-            var msg = $"[AES-EAX] {label}: {hex}";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
-        }
+        // Debug logging helper - commented out for production, uncomment if needed for troubleshooting
+        //private static void LogBytes(string label, byte[] data)
+        //{
+        //    var hex = BitConverter.ToString(data).Replace("-", " ");
+        //    var msg = $"[AES-EAX] {label}: {hex}";
+        //    Console.WriteLine(msg);
+        //    System.Diagnostics.Debug.WriteLine(msg);
+        //}
         
         // Read buffer for incoming messages
         private byte[] _readBuffer = Array.Empty<byte>();
@@ -106,10 +107,11 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
 
             ushort messageLength = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
 
-            var msg = $"[AES-EAX] READ: Counter={_readCounter}, MessageLength={messageLength}";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
-            LogBytes("READ: Length buffer", lengthBuffer.ToArray());
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] READ: Counter={_readCounter}, MessageLength={messageLength}";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
+            //LogBytes("READ: Length buffer", lengthBuffer.ToArray());
 
             // Read encrypted message + MAC
             int ciphertextLength = messageLength + MacSize;
@@ -123,8 +125,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 totalRead += read;
             }
 
-            LogBytes("READ: Ciphertext+MAC", ciphertext);
-            LogBytes("READ: Server session key", _serverSessionKey);
+            // Debug logging - uncomment if needed for troubleshooting
+            //LogBytes("READ: Ciphertext+MAC", ciphertext);
+            //LogBytes("READ: Server session key", _serverSessionKey);
 
             // Decrypt with AES-EAX
             _readBuffer = DecryptMessage(ciphertext, lengthBuffer.ToArray(), _serverSessionKey, _readCounter);
@@ -132,9 +135,10 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             _readPosition = 0;
             _readCounter++;
             
-            msg = $"[AES-EAX] READ: Decrypted {_readLength} bytes successfully";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] READ: Decrypted {_readLength} bytes successfully";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
 
             // Return as much as requested
             int bytesToReturn = Math.Min(count, _readLength);
@@ -154,11 +158,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             byte[] plaintext = new byte[count];
             Array.Copy(buffer, offset, plaintext, 0, count);
 
-            var msg = $"[AES-EAX] WRITE: Counter={_writeCounter}, PlaintextLength={count}";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
-            LogBytes("WRITE: Plaintext", plaintext);
-            LogBytes("WRITE: Client session key", _clientSessionKey);
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] WRITE: Counter={_writeCounter}, PlaintextLength={count}";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
+            //LogBytes("WRITE: Plaintext", plaintext);
+            //LogBytes("WRITE: Client session key", _clientSessionKey);
 
             // Encrypt with AES-EAX
             byte[] lengthBuffer = new byte[2];
@@ -167,16 +172,18 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             byte[] ciphertext = EncryptMessage(plaintext, lengthBuffer, _clientSessionKey, _writeCounter);
             _writeCounter++;
 
-            LogBytes("WRITE: Length buffer", lengthBuffer);
-            LogBytes("WRITE: Ciphertext+MAC", ciphertext);
+            // Debug logging - uncomment if needed for troubleshooting
+            //LogBytes("WRITE: Length buffer", lengthBuffer);
+            //LogBytes("WRITE: Ciphertext+MAC", ciphertext);
 
             // Write: [2-byte length][encrypted message + MAC]
             _baseStream.Write(lengthBuffer, 0, 2);
             _baseStream.Write(ciphertext, 0, ciphertext.Length);
             
-            msg = $"[AES-EAX] WRITE: Sent {ciphertext.Length} bytes (including MAC)";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] WRITE: Sent {ciphertext.Length} bytes (including MAC)";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
         }
 
         private static byte[] EncryptMessage(byte[] plaintext, byte[] associatedData, byte[] key, ulong counter)
@@ -185,11 +192,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             byte[] nonce = new byte[NonceSize];
             BinaryPrimitives.WriteUInt64LittleEndian(nonce, counter);
 
-            var msg = $"[AES-EAX] ENCRYPT: Counter={counter}";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
-            LogBytes("ENCRYPT: Nonce", nonce);
-            LogBytes("ENCRYPT: Associated data", associatedData);
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] ENCRYPT: Counter={counter}";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
+            //LogBytes("ENCRYPT: Nonce", nonce);
+            //LogBytes("ENCRYPT: Associated data", associatedData);
 
             // Initialize EAX cipher
             var cipher = new EaxBlockCipher(new AesEngine());
@@ -209,11 +217,12 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             byte[] nonce = new byte[NonceSize];
             BinaryPrimitives.WriteUInt64LittleEndian(nonce, counter);
 
-            var msg = $"[AES-EAX] DECRYPT: Counter={counter}";
-            Console.WriteLine(msg);
-            System.Diagnostics.Debug.WriteLine(msg);
-            LogBytes("DECRYPT: Nonce", nonce);
-            LogBytes("DECRYPT: Associated data", associatedData);
+            // Debug logging - uncomment if needed for troubleshooting
+            //var msg = $"[AES-EAX] DECRYPT: Counter={counter}";
+            //Console.WriteLine(msg);
+            //System.Diagnostics.Debug.WriteLine(msg);
+            //LogBytes("DECRYPT: Nonce", nonce);
+            //LogBytes("DECRYPT: Associated data", associatedData);
 
             // Initialize EAX cipher
             var cipher = new EaxBlockCipher(new AesEngine());
@@ -226,17 +235,19 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             {
                 len += cipher.DoFinal(plaintext, len);
                 
-                msg = $"[AES-EAX] DECRYPT: Success, plaintext length={len}";
-                Console.WriteLine(msg);
-                System.Diagnostics.Debug.WriteLine(msg);
-                if (len > 0 && len <= 100)
-                    LogBytes("DECRYPT: Plaintext", plaintext.Take(len).ToArray());
+                // Debug logging - uncomment if needed for troubleshooting
+                //var msg = $"[AES-EAX] DECRYPT: Success, plaintext length={len}";
+                //Console.WriteLine(msg);
+                //System.Diagnostics.Debug.WriteLine(msg);
+                //if (len > 0 && len <= 100)
+                //    LogBytes("DECRYPT: Plaintext", plaintext.Take(len).ToArray());
             }
             catch (Exception ex)
             {
-                msg = $"[AES-EAX] DECRYPT: FAILED - MAC verification error";
-                Console.WriteLine(msg);
-                System.Diagnostics.Debug.WriteLine(msg);
+                // Debug logging - uncomment if needed for troubleshooting
+                //var msg = $"[AES-EAX] DECRYPT: FAILED - MAC verification error";
+                //Console.WriteLine(msg);
+                //System.Diagnostics.Debug.WriteLine(msg);
                 throw new InvalidOperationException("AES-EAX decryption failed - MAC verification error", ex);
             }
 
