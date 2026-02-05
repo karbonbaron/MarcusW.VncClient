@@ -24,6 +24,9 @@ namespace MarcusW.VncClient
         private readonly object _outputHandlerLock = new object();
         private IOutputHandler? _outputHandler;
 
+        private readonly object _cursorHandlerLock = new object();
+        private ICursorHandler? _cursorHandler;
+
         private readonly object _interruptionCauseLock = new object();
         private Exception? _interruptionCause;
 
@@ -72,6 +75,20 @@ namespace MarcusW.VncClient
         {
             get => GetWithLock(ref _outputHandler, _outputHandlerLock);
             set => RaiseAndSetIfChangedWithLock(ref _outputHandler, value, _outputHandlerLock);
+        }
+
+        /// <summary>
+        /// Gets or sets the handler for cursor updates from the server.
+        /// Subscribe to <see cref="PropertyChanged"/> to receive change notifications.
+        /// </summary>
+        /// <remarks>
+        /// Implement <see cref="ICursorHandler"/> to support local cursor rendering,
+        /// which significantly improves perceived performance over slow network connections.
+        /// </remarks>
+        public ICursorHandler? CursorHandler
+        {
+            get => GetWithLock(ref _cursorHandler, _cursorHandlerLock);
+            set => RaiseAndSetIfChangedWithLock(ref _cursorHandler, value, _cursorHandlerLock);
         }
 
         /// <summary>

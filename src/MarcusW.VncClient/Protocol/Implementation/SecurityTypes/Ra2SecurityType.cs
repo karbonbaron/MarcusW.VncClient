@@ -13,6 +13,31 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
     /// A security type that implements RA2 (RSA-AES) authentication.
     /// This provides RSA public key cryptography for secure authentication.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>⚠️ WARNING: This is a simplified, non-functional placeholder implementation!</strong></para>
+    /// <para>
+    /// The current implementation does NOT match the full RFB RA2 specification and will NOT work 
+    /// with real RealVNC servers. The full RA2 protocol requires:
+    /// </para>
+    /// <list type="number">
+    /// <item><description>Bidirectional RSA key exchange (client must also send its public key)</description></item>
+    /// <item><description>Mutual random number exchange (both sides generate and exchange 16-byte randoms)</description></item>
+    /// <item><description>Session key derivation using SHA1: ClientSessionKey = SHA1(ServerRandom || ClientRandom)</description></item>
+    /// <item><description>AES-EAX encryption for ALL subsequent messages (not available in standard .NET)</description></item>
+    /// <item><description>Hash verification: ServerHash and ClientHash exchange for mutual authentication</description></item>
+    /// <item><description>Subtype handling (username+password vs password-only modes)</description></item>
+    /// <item><description>Encrypted message framing: [2-byte length][encrypted message][16-byte MAC]</description></item>
+    /// </list>
+    /// <para>
+    /// Implementing the full RA2 specification requires AES-EAX mode, which is not available in 
+    /// System.Security.Cryptography and would require an external cryptography library such as 
+    /// BouncyCastle or a custom implementation.
+    /// </para>
+    /// <para>
+    /// This implementation is kept for API compatibility and potential future completion, but 
+    /// should NOT be used in production environments expecting real RealVNC server compatibility.
+    /// </para>
+    /// </remarks>
     public class Ra2SecurityType : ISecurityType
     {
         private readonly RfbConnectionContext _context;
@@ -179,6 +204,28 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
     /// A security type that implements RA2ne (RSA-AES without encryption) authentication.
     /// This provides RSA authentication but without transport encryption.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>⚠️ WARNING: This is a simplified, non-functional placeholder implementation!</strong></para>
+    /// <para>
+    /// The current implementation does NOT match the full RFB RA2ne specification and will NOT work 
+    /// with real RealVNC servers. RA2ne follows the same complex protocol as RA2, including:
+    /// </para>
+    /// <list type="bullet">
+    /// <item><description>Bidirectional RSA key exchange</description></item>
+    /// <item><description>Mutual random number exchange</description></item>
+    /// <item><description>Hash verification for mutual authentication</description></item>
+    /// <item><description>Encrypted credential exchange during handshake</description></item>
+    /// </list>
+    /// <para>
+    /// The only difference from RA2 is that RA2ne does NOT encrypt subsequent protocol messages 
+    /// after the security handshake completes, whereas RA2 requires AES-EAX encryption for all 
+    /// messages after authentication.
+    /// </para>
+    /// <para>
+    /// This implementation is kept for API compatibility and potential future completion, but 
+    /// should NOT be used in production environments expecting real RealVNC server compatibility.
+    /// </para>
+    /// </remarks>
     public class Ra2neSecurityType : ISecurityType
     {
         private readonly RfbConnectionContext _context;

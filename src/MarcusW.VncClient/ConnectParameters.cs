@@ -29,6 +29,7 @@ namespace MarcusW.VncClient
         private IOutputHandler? _initialOutputHandler;
         private int _jpegQualityLevel = 100;
         private JpegSubsamplingLevel _jpegSubsamplingLevel = JpegSubsamplingLevel.None;
+        private int _preferredCompressionLevel = -1;
         private TimeSpan _framebufferUpdateDelay = TimeSpan.Zero;
         private TimeSpan _desktopResizeUpdateDelay = TimeSpan.Zero;
 
@@ -135,6 +136,18 @@ namespace MarcusW.VncClient
         }
 
         /// <summary>
+        /// Gets or sets the preferred compression level (0-9).
+        /// Set to -1 for automatic (default: 6).
+        /// Lower values mean less compression (faster, more bandwidth).
+        /// Higher values mean more compression (slower, less bandwidth).
+        /// </summary>
+        public int PreferredCompressionLevel
+        {
+            get => _preferredCompressionLevel;
+            set => ThrowIfFrozen(() => _preferredCompressionLevel = value);
+        }
+
+        /// <summary>
         /// Gets or sets the minimum delay between framebuffer update requests.
         /// Set to <see cref="TimeSpan.Zero"/> to disable throttling. Default is Zero.
         /// For WayVNC compatibility, use 300-500ms.
@@ -171,6 +184,8 @@ namespace MarcusW.VncClient
                 throw new ConnectParametersValidationException($"{nameof(JpegQualityLevel)} parameter is not a valid percentage.");
             if (!Enum.IsDefined(typeof(JpegSubsamplingLevel), JpegSubsamplingLevel))
                 throw new ConnectParametersValidationException($"{nameof(JpegSubsamplingLevel)} parameter is invalid.");
+            if (PreferredCompressionLevel < -1 || PreferredCompressionLevel > 9)
+                throw new ConnectParametersValidationException($"{nameof(PreferredCompressionLevel)} parameter must be between -1 and 9.");
             if (FramebufferUpdateDelay < TimeSpan.Zero)
                 throw new ConnectParametersValidationException($"{nameof(FramebufferUpdateDelay)} parameter must not be negative.");
             if (DesktopResizeUpdateDelay < TimeSpan.Zero)

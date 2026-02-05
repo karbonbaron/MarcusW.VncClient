@@ -32,6 +32,15 @@ namespace MarcusW.VncClient.Protocol.Implementation
         private readonly StateValue<bool> _serverSupportsFencesValue = new StateValue<bool>(false);
         private readonly StateValue<bool> _serverSupportsContinuousUpdatesValue = new StateValue<bool>(false);
         private readonly StateValue<bool> _serverSupportsExtendedDesktopSizeValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _serverSupportsXvpValue = new StateValue<bool>(false);
+        private readonly StateValue<byte> _xvpVersionValue = new StateValue<byte>(0);
+        private readonly StateValue<bool> _serverSupportsQemuExtendedKeyEventValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _serverSupportsQemuPointerMotionChangeValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _serverSupportsQemuAudioValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _serverSupportsQemuLedStateValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _relativePointerModeValue = new StateValue<bool>(false);
+        private readonly StateValue<bool> _serverSupportsExtendedClipboardValue = new StateValue<bool>(false);
+        private readonly StateValue<ExtendedClipboardCapabilities?> _serverClipboardCapabilitiesValue = new StateValue<ExtendedClipboardCapabilities?>(null);
 
         private readonly StateValue<bool> _continuousUpdatesEnabledValue = new StateValue<bool>(false);
 
@@ -177,6 +186,87 @@ namespace MarcusW.VncClient.Protocol.Implementation
                 _serverSupportsExtendedDesktopSizeValue.Value = value;
                 _context.ConnectionDetails.SetDesktopIsResizable(value);
             }
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the xvp extension.
+        /// </summary>
+        public bool ServerSupportsXvp
+        {
+            get => _serverSupportsXvpValue.Value;
+            set => _serverSupportsXvpValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the xvp extension version supported by the server.
+        /// </summary>
+        public byte XvpVersion
+        {
+            get => _xvpVersionValue.Value;
+            set => _xvpVersionValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the QEMU Extended Key Event extension.
+        /// </summary>
+        public bool ServerSupportsQemuExtendedKeyEvent
+        {
+            get => _serverSupportsQemuExtendedKeyEventValue.Value;
+            set => _serverSupportsQemuExtendedKeyEventValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the QEMU Pointer Motion Change extension.
+        /// </summary>
+        public bool ServerSupportsQemuPointerMotionChange
+        {
+            get => _serverSupportsQemuPointerMotionChangeValue.Value;
+            set => _serverSupportsQemuPointerMotionChangeValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the QEMU Audio extension.
+        /// </summary>
+        public bool ServerSupportsQemuAudio
+        {
+            get => _serverSupportsQemuAudioValue.Value;
+            set => _serverSupportsQemuAudioValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the QEMU LED State extension.
+        /// </summary>
+        public bool ServerSupportsQemuLedState
+        {
+            get => _serverSupportsQemuLedStateValue.Value;
+            set => _serverSupportsQemuLedStateValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether relative pointer mode is active.
+        /// </summary>
+        public bool RelativePointerMode
+        {
+            get => _relativePointerModeValue.Value;
+            set => _relativePointerModeValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets whether the server supports the Extended Clipboard extension.
+        /// </summary>
+        public bool ServerSupportsExtendedClipboard
+        {
+            get => _serverSupportsExtendedClipboardValue.Value;
+            set => _serverSupportsExtendedClipboardValue.Value = value;
+        }
+
+        /// <summary>
+        /// Gets or sets the server's extended clipboard capabilities.
+        /// </summary>
+        public ExtendedClipboardCapabilities? ServerClipboardCapabilities
+        {
+            get => _serverClipboardCapabilitiesValue.Value;
+            set => _serverClipboardCapabilitiesValue.Value = value;
         }
 
         /// <summary>

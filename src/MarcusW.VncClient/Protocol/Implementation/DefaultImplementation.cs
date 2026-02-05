@@ -163,6 +163,7 @@ namespace MarcusW.VncClient.Protocol.Implementation
             yield return new ServerCutTextMessageType(context);
             yield return new ServerFenceMessageType(context);
             yield return new EndOfContinuousUpdatesMessageType(context);
+            yield return new XvpServerMessageType(context);
 
             // Outgoing
             yield return new SetPixelFormatMessageType();
@@ -174,6 +175,8 @@ namespace MarcusW.VncClient.Protocol.Implementation
             yield return new KeyEventMessageType();
             yield return new ClientCutTextMessageType();
             yield return new SetDesktopSizeMessageType(context);
+            yield return new XvpClientMessageType();
+            yield return new QemuClientMessageType();
         }
 
         /// <summary>
@@ -190,6 +193,9 @@ namespace MarcusW.VncClient.Protocol.Implementation
             // Frame
             yield return new RawEncodingType();
             yield return new CopyRectEncodingType();
+            yield return new RreEncodingType();
+            yield return new CorreEncodingType();
+            yield return new HextileEncodingType();
             yield return new ZLibEncodingType(context);
             yield return new ZrleEncodingType(context);
             if (IsTightAvailable)
@@ -207,6 +213,17 @@ namespace MarcusW.VncClient.Protocol.Implementation
             yield return new JpegSubsamplingLevelEncodingType(context);
             yield return new DesktopSizeEncodingType(context);
             yield return new ExtendedDesktopSizeEncodingType(context);
+            yield return new DesktopNameEncodingType(context);
+            yield return new CompressionLevelEncodingType(context);
+            yield return new XvpEncodingType();
+            yield return new CursorEncodingType(context);
+            yield return new XCursorEncodingType(context);
+            yield return new CursorWithAlphaEncodingType(context);
+            yield return new QemuExtendedKeyEventEncodingType(context);
+            yield return new QemuPointerMotionChangeEncodingType(context);
+            yield return new QemuLedStateEncodingType(context);
+            yield return new QemuAudioEncodingType(context);
+            yield return new ExtendedClipboardEncodingType(context);
         }
     }
 }

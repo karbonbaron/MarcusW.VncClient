@@ -27,5 +27,56 @@ namespace MarcusW.VncClient
             var message = new ClientCutTextMessage(text);
             return connection.EnqueueMessage(message, cancellationToken);
         }
+
+        /// <summary>
+        /// Sends an xvp shutdown command to the VNC server.
+        /// The server must support the xvp extension for this to work.
+        /// </summary>
+        /// <param name="connection">The RFB connection.</param>
+        /// <param name="cancellationToken">A cancellation token to stop the operation.</param>
+        /// <returns>True if the message was enqueued successfully, false otherwise.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when connection is null.</exception>
+        public static bool SendXvpShutdown(this RfbConnection connection, CancellationToken cancellationToken = default)
+        {
+            if (connection == null)
+                throw new ArgumentNullException(nameof(connection));
+
+            var message = new XvpClientMessage(XvpOperation.Shutdown);
+            return connection.EnqueueMessage(message, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends an xvp reboot command to the VNC server.
+        /// The server must support the xvp extension for this to work.
+        /// </summary>
+        /// <param name="connection">The RFB connection.</param>
+        /// <param name="cancellationToken">A cancellation token to stop the operation.</param>
+        /// <returns>True if the message was enqueued successfully, false otherwise.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when connection is null.</exception>
+        public static bool SendXvpReboot(this RfbConnection connection, CancellationToken cancellationToken = default)
+        {
+            if (connection == null)
+                throw new ArgumentNullException(nameof(connection));
+
+            var message = new XvpClientMessage(XvpOperation.Reboot);
+            return connection.EnqueueMessage(message, cancellationToken);
+        }
+
+        /// <summary>
+        /// Sends an xvp reset command to the VNC server.
+        /// The server must support the xvp extension for this to work.
+        /// </summary>
+        /// <param name="connection">The RFB connection.</param>
+        /// <param name="cancellationToken">A cancellation token to stop the operation.</param>
+        /// <returns>True if the message was enqueued successfully, false otherwise.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when connection is null.</exception>
+        public static bool SendXvpReset(this RfbConnection connection, CancellationToken cancellationToken = default)
+        {
+            if (connection == null)
+                throw new ArgumentNullException(nameof(connection));
+
+            var message = new XvpClientMessage(XvpOperation.Reset);
+            return connection.EnqueueMessage(message, cancellationToken);
+        }
     }
 }
