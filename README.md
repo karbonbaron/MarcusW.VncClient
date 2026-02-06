@@ -27,7 +27,7 @@ Source Code: [AvaloniaVncClient](samples/AvaloniaVncClient)
 - 🌟 **Server compatibility:** Tested with *TigerVNC Server*, *LibVNCServer*, *RealVNC VNC Connect*, *Vino-Server* and *UltraVNC*. This implementation follows the RFB protocol specification very carefully, so it's probably compatible with many more servers.
 - 🌟 **Stability:** Battle-tested and proven to be very reliable.
 - 🌟 **Modular & Extensible:** The very modular API design allows the easy addition of more Security, Message and Encoding Types as well as the replacement of main implementation components.
-- 🌟 **No external dependencies:** The core library does not use any libraries outside of the .NET SDK.
+- 🌟 **Minimal dependencies:** The core library uses only BouncyCastle.Cryptography for advanced security types (RA2/RA2ne) and Microsoft.Extensions.Logging.Abstractions for logging.
 
 ### Features
 
@@ -78,7 +78,7 @@ This is not a bug or limitation of this library - it's an inherent restriction o
 
 **Core library:** [Community.MarcusW.VncClient](https://www.nuget.org/packages/Community.MarcusW.VncClient)
 
-This is library contains the main protocol implementation and is completely platform-agnostic thanks to some abstractions using C# interfaces. It has no external dependencies.
+This library contains the main protocol implementation and is completely platform-agnostic thanks to some abstractions using C# interfaces. It has minimal dependencies: BouncyCastle.Cryptography for advanced security types (RA2/RA2ne) and Microsoft.Extensions.Logging.Abstractions for logging.
 
 **Adapter libraries:** 
 - [Community.MarcusW.VncClient.Avalonia](https://www.nuget.org/packages/Community.MarcusW.VncClient.Avalonia) - Avalonia UI controls
