@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace MarcusW.VncClient
 {
@@ -30,5 +31,30 @@ namespace MarcusW.VncClient
         }
 
         private void NotifyPropertyChanged([CallerMemberName] string propertyName = "") => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        private void SetConnectionState(ConnectionState newState, string? reason = null, Exception? exception = null, bool isManualAction = false)
+        {
+            // Atomically read current state and update to new state
+            var previousState = (ConnectionState)Interlocked.Exchange(
+                ref Unsafe.As<ConnectionState, int>(ref _connectionState), 
+                (int)newState);
+            
+            // Only raise events if the state actually changed
+            if (previousState == newState)
+                return;
+            
+            // Notify property changed
+            NotifyPropertyChanged(nameof(ConnectionState));
+            
+            // Raise the ConnectionStateChanged event
+            var args = new ConnectionStateChangedEventArgs(
+                previousState,
+                newState,
+                reason,
+                exception,
+                _reconnectAttemptCount,
+                isManualAction);
+            ConnectionStateChanged?.Invoke(this, args);
+        }
     }
 }

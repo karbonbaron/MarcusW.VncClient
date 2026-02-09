@@ -43,6 +43,11 @@ namespace MarcusW.VncClient
         private volatile bool _disposed;
 
         /// <summary>
+        /// Tracks the number of reconnect attempts (1-based).
+        /// </summary>
+        private int _reconnectAttemptCount;
+
+        /// <summary>
         /// Gets the used RFB protocol implementation.
         /// </summary>
         public IRfbProtocolImplementation ProtocolImplementation { get; }
@@ -108,12 +113,19 @@ namespace MarcusW.VncClient
         {
             // We use Interlocked here so we can use the connection state value for some synchronization.
             get => (ConnectionState)Interlocked.CompareExchange(ref Unsafe.As<ConnectionState, int>(ref _connectionState), 0, 0);
-            private set
-            {
-                if (Interlocked.Exchange(ref Unsafe.As<ConnectionState, int>(ref _connectionState), (int)value) != (int)value)
-                    NotifyPropertyChanged();
-            }
+            private set => SetConnectionState(value);
         }
+
+        /// <summary>
+        /// Gets the number of reconnect attempts that have been made.
+        /// This is 0 for the initial connection and increments with each reconnect attempt.
+        /// </summary>
+        public int ReconnectAttemptCount => _reconnectAttemptCount;
+
+        /// <summary>
+        /// Raised when the connection state changes.
+        /// </summary>
+        public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
         /// <inheritdoc />
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -136,8 +148,11 @@ namespace MarcusW.VncClient
             try
             {
                 await EstablishNewConnectionAsync(cancellationToken).ConfigureAwait(false);
-                ConnectionState = ConnectionState.Connected;
+                SetConnectionState(ConnectionState.Connected, "Initial connection established");
                 InterruptionCause = null;
+                
+                // Reset reconnect counter on initial connection
+                _reconnectAttemptCount = 0;
             }
             finally
             {
@@ -187,7 +202,7 @@ namespace MarcusW.VncClient
             try
             {
                 await CloseConnectionAsync().ConfigureAwait(false);
-                ConnectionState = ConnectionState.Closed;
+                SetConnectionState(ConnectionState.Closed, "CloseAsync called", isManualAction: true);
             }
             finally
             {
@@ -195,14 +210,68 @@ namespace MarcusW.VncClient
             }
         }
 
+        /// <summary>
+        /// Forces a reconnection to the VNC server, even if the current connection is still active.
+        /// </summary>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A task that completes when the reconnection has been initiated.</returns>
+        public async Task ForceReconnectAsync(CancellationToken cancellationToken = default)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(RfbConnection));
+
+            // This method must not be called before StartAsync finished.
+            lock (_startedLock)
+            {
+                if (!_started)
+                    throw new InvalidOperationException("Cannot force reconnect before the initial connect has completed. "
+                        + "Please consider using the cancellation token passed to the connect method instead.");
+            }
+
+            _logger.LogInformation("Forcing reconnection to {endpoint}...", Parameters.TransportParameters);
+
+            // Cancel any existing reconnect attempts and start a new one.
+            _reconnectCts.Cancel();
+            if (_reconnectTask != null)
+            {
+                try
+                {
+                    await _reconnectTask.ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Ignored.
+                }
+            }
+
+            // Start a new reconnect task.
+            _reconnectTask = ReconnectAsync(cancellationToken, isManualAction: true);
+        }
+
         // Is called by the other class part to signal us that the running connection has failed in the background.
         private void OnRunningConnectionFailed(Exception exception)
         {
             // Mark the connection as interrupted (also avoids that this handler gets called twice per connection)
-            if (Interlocked.CompareExchange(ref Unsafe.As<ConnectionState, int>(ref _connectionState), (int)ConnectionState.Interrupted, (int)ConnectionState.Connected)
-                != (int)ConnectionState.Connected)
+            // Use CompareExchange to ensure we only transition from Connected to Interrupted once
+            var previousState = (ConnectionState)Interlocked.CompareExchange(
+                ref Unsafe.As<ConnectionState, int>(ref _connectionState), 
+                (int)ConnectionState.Interrupted, 
+                (int)ConnectionState.Connected);
+            
+            if (previousState != ConnectionState.Connected)
                 return;
+
+            // Notify property changed
             NotifyPropertyChanged(nameof(ConnectionState));
+            
+            // Raise the ConnectionStateChanged event
+            var args = new ConnectionStateChangedEventArgs(
+                ConnectionState.Connected,
+                ConnectionState.Interrupted,
+                "Connection interrupted due to failure",
+                exception,
+                _reconnectAttemptCount);
+            ConnectionStateChanged?.Invoke(this, args);
 
             // Remember the interruption cause
             InterruptionCause = exception;
@@ -218,9 +287,10 @@ namespace MarcusW.VncClient
             }
         }
 
-        private async Task ReconnectAsync()
+        private async Task ReconnectAsync(CancellationToken cancellationToken = default, bool isManualAction = false)
         {
-            CancellationToken cancellationToken = _reconnectCts.Token;
+            // Always use the internal reconnect cancellation token
+            cancellationToken = _reconnectCts.Token;
 
             // Synchronize connection management operations.
             await _connectionManagementSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -238,9 +308,13 @@ namespace MarcusW.VncClient
                         // Giving up.
                         _logger.LogInformation("No reconnect attempts to {endpoint} remaining. Giving up.", Parameters.TransportParameters);
                         CleanupPreviousConnection();
-                        ConnectionState = ConnectionState.Closed;
+                        SetConnectionState(ConnectionState.Closed, "Gave up reconnecting after " + failedAttempts + " attempts");
                         return;
                     }
+
+                    // Increment reconnect attempt count
+                    Interlocked.Increment(ref _reconnectAttemptCount);
+                    var currentAttempt = _reconnectAttemptCount;
 
                     // Next try
                     try
@@ -249,12 +323,15 @@ namespace MarcusW.VncClient
                         await Task.Delay(Parameters.ReconnectDelay, cancellationToken).ConfigureAwait(false);
 
                         // Next try...
-                        ConnectionState = ConnectionState.Reconnecting;
+                        SetConnectionState(ConnectionState.Reconnecting, $"Reconnect attempt {currentAttempt} in progress", isManualAction: isManualAction);
                         InterruptionCause = null;
                         await EstablishNewConnectionAsync(cancellationToken).ConfigureAwait(false);
 
                         // This seems to have been successful.
-                        ConnectionState = ConnectionState.Connected;
+                        SetConnectionState(ConnectionState.Connected, $"Reconnect attempt {currentAttempt} successful", isManualAction: isManualAction);
+
+                        // Reset the reconnect counter after successful connection
+                        _reconnectAttemptCount = 0;
 
                         return;
                     }
@@ -262,15 +339,15 @@ namespace MarcusW.VncClient
                     {
                         // Reconnect was canceled
                         CleanupPreviousConnection();
-                        ConnectionState = ConnectionState.Closed;
+                        SetConnectionState(ConnectionState.Closed, "Reconnect canceled", isManualAction: isManualAction);
                         return;
                     }
                     catch
                     {
                         // Reconnect attempt failed (exception has already been logged by EstablishNewConnectionAsync)
-                        _logger.LogWarning("Reconnect attempt {attempt} to {endpoint} failed.", failedAttempts, Parameters.TransportParameters);
+                        _logger.LogWarning("Reconnect attempt {attempt} to {endpoint} failed.", currentAttempt, Parameters.TransportParameters);
                         CleanupPreviousConnection();
-                        ConnectionState = ConnectionState.ReconnectFailed;
+                        SetConnectionState(ConnectionState.ReconnectFailed, $"Reconnect attempt {currentAttempt} failed", isManualAction: isManualAction);
 
                         // Next round...
                         failedAttempts++;
@@ -292,7 +369,7 @@ namespace MarcusW.VncClient
             // Cancel reconnects
             _reconnectCts.Cancel();
 
-            ConnectionState = ConnectionState.Closed;
+            SetConnectionState(ConnectionState.Closed, "Dispose called");
 
             // Acquire the lock to ensure the connection setup is completed before destroying anything.
             // Also ensures no new connections are set up after this point because the lock is never released.
