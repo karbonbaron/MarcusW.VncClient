@@ -32,6 +32,8 @@ namespace MarcusW.VncClient
         private int _preferredCompressionLevel = -1;
         private TimeSpan _framebufferUpdateDelay = TimeSpan.Zero;
         private TimeSpan _desktopResizeUpdateDelay = TimeSpan.Zero;
+        private TimeSpan _postInitializationDelay = TimeSpan.FromMilliseconds(200);
+        private TimeSpan _postSetEncodingsDelay = TimeSpan.FromMilliseconds(100);
 
         /// <summary>
         /// Specifies the transport type and parameters to connect to.
@@ -169,6 +171,28 @@ namespace MarcusW.VncClient
             set => ThrowIfFrozen(() => _desktopResizeUpdateDelay = value);
         }
 
+        /// <summary>
+        /// Gets or sets the delay after sending initial messages to prevent server flooding.
+        /// Set to <see cref="TimeSpan.Zero"/> to disable. Default is 200ms.
+        /// This is a compatibility workaround for servers (e.g., WayVNC) that need time to process initial messages.
+        /// </summary>
+        public TimeSpan PostInitializationDelay
+        {
+            get => _postInitializationDelay;
+            set => ThrowIfFrozen(() => _postInitializationDelay = value);
+        }
+
+        /// <summary>
+        /// Gets or sets the delay after sending SetEncodings to allow the server to process the encoding change.
+        /// Set to <see cref="TimeSpan.Zero"/> to disable. Default is 100ms.
+        /// This is a compatibility workaround for servers that need time to reconfigure their encoding pipeline.
+        /// </summary>
+        public TimeSpan PostSetEncodingsDelay
+        {
+            get => _postSetEncodingsDelay;
+            set => ThrowIfFrozen(() => _postSetEncodingsDelay = value);
+        }
+
         /// <inhertitdoc />
         public override void Validate()
         {
@@ -190,6 +214,10 @@ namespace MarcusW.VncClient
                 throw new ConnectParametersValidationException($"{nameof(FramebufferUpdateDelay)} parameter must not be negative.");
             if (DesktopResizeUpdateDelay < TimeSpan.Zero)
                 throw new ConnectParametersValidationException($"{nameof(DesktopResizeUpdateDelay)} parameter must not be negative.");
+            if (PostInitializationDelay < TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(PostInitializationDelay)} parameter must not be negative.");
+            if (PostSetEncodingsDelay < TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(PostSetEncodingsDelay)} parameter must not be negative.");
         }
 
         /// <inheritdoc />

@@ -524,10 +524,12 @@
             // Clear canvas and framebuffer when attaching to new connection
             ClearCanvasAndFramebuffer();
             
-            // If connection is already established, request a full framebuffer update
+            // If connection is already established, request an incremental framebuffer update
+            // to catch up. The protocol layer already sent the initial non-incremental request,
+            // so we only need an incremental refresh here.
             if (_connection.ConnectionState == ConnectionState.Connected)
             {
-                RequestFullFramebufferUpdate();
+                RequestIncrementalFramebufferUpdate();
                 
                 // Also set up clipboard monitoring if already connected
                 InvokeAsync(SetupClipboardMonitoringAsync);
@@ -543,8 +545,12 @@
         if (e.PropertyName == nameof(RfbConnection.ConnectionState) && 
             _connection?.ConnectionState == ConnectionState.Connected)
         {
-            RequestFullFramebufferUpdate();
-            
+            // Do NOT send an extra non-incremental FramebufferUpdateRequest here.
+            // The protocol layer (RfbMessageSender.EnqueueInitialMessages) already sends
+            // the initial non-incremental request when the connection is established.
+            // Sending duplicates forces the server (especially slow devices like RPi 3)
+            // to process multiple full-screen updates, causing a long startup freeze.
+
             // Set up clipboard monitoring when connected
             InvokeAsync(SetupClipboardMonitoringAsync);
         }
@@ -582,14 +588,15 @@
         return Task.CompletedTask;
     }
 
-    private void RequestFullFramebufferUpdate()
+    private void RequestIncrementalFramebufferUpdate()
     {
         if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed)
         {
             var fullScreenRect = new Rectangle(Position.Origin, _connection.RemoteFramebufferSize);
-            // Use centralized throttled request - respects FramebufferUpdateDelay from ConnectParameters
-            // Non-incremental request for full refresh on connect/reconnect
-            _connection.EnqueueFramebufferUpdateRequest(fullScreenRect, incremental: false);
+            // Use incremental request - the protocol layer already sent the initial
+            // non-incremental request, so this is just to refresh the UI with any
+            // changes since then (e.g. late component attach or reconnect scenarios).
+            _connection.EnqueueFramebufferUpdateRequest(fullScreenRect, incremental: true);
         }
     }
 

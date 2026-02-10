@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using MarcusW.VncClient.Output;
@@ -18,19 +17,15 @@ namespace MarcusW.VncClient
     {
         private readonly ILogger<RfbConnection> _logger;
 
-        private readonly object _renderTargetLock = new object();
-        private IRenderTarget? _renderTarget;
+        // For reference-type properties, volatile is sufficient for atomic read/write.
+        // The RaiseAndSetIfChanged helper uses Interlocked.CompareExchange for the compare-and-swap pattern.
+        private volatile IRenderTarget? _renderTarget;
+        private volatile IOutputHandler? _outputHandler;
+        private volatile ICursorHandler? _cursorHandler;
+        private volatile Exception? _interruptionCause;
 
-        private readonly object _outputHandlerLock = new object();
-        private IOutputHandler? _outputHandler;
-
-        private readonly object _cursorHandlerLock = new object();
-        private ICursorHandler? _cursorHandler;
-
-        private readonly object _interruptionCauseLock = new object();
-        private Exception? _interruptionCause;
-
-        private ConnectionState _connectionState = ConnectionState.Uninitialized;
+        // Stored as int for safe use with Interlocked operations (avoids Unsafe.As<ConnectionState, int>).
+        private int _connectionStateValue = (int)ConnectionState.Uninitialized;
 
         private readonly object _startedLock = new object();
         private bool _started;
@@ -68,8 +63,14 @@ namespace MarcusW.VncClient
         /// </summary>
         public IRenderTarget? RenderTarget
         {
-            get => GetWithLock(ref _renderTarget, _renderTargetLock);
-            set => RaiseAndSetIfChangedWithLock(ref _renderTarget, value, _renderTargetLock);
+            get => _renderTarget;
+            set
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(RfbConnection));
+                if (ReferenceEquals(_renderTarget, value)) return;
+                _renderTarget = value;
+                NotifyPropertyChanged();
+            }
         }
 
         /// <summary>
@@ -78,8 +79,14 @@ namespace MarcusW.VncClient
         /// </summary>
         public IOutputHandler? OutputHandler
         {
-            get => GetWithLock(ref _outputHandler, _outputHandlerLock);
-            set => RaiseAndSetIfChangedWithLock(ref _outputHandler, value, _outputHandlerLock);
+            get => _outputHandler;
+            set
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(RfbConnection));
+                if (ReferenceEquals(_outputHandler, value)) return;
+                _outputHandler = value;
+                NotifyPropertyChanged();
+            }
         }
 
         /// <summary>
@@ -92,8 +99,14 @@ namespace MarcusW.VncClient
         /// </remarks>
         public ICursorHandler? CursorHandler
         {
-            get => GetWithLock(ref _cursorHandler, _cursorHandlerLock);
-            set => RaiseAndSetIfChangedWithLock(ref _cursorHandler, value, _cursorHandlerLock);
+            get => _cursorHandler;
+            set
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(RfbConnection));
+                if (ReferenceEquals(_cursorHandler, value)) return;
+                _cursorHandler = value;
+                NotifyPropertyChanged();
+            }
         }
 
         /// <summary>
@@ -102,8 +115,14 @@ namespace MarcusW.VncClient
         /// </summary>
         public Exception? InterruptionCause
         {
-            get => GetWithLock(ref _interruptionCause, _interruptionCauseLock);
-            private set => RaiseAndSetIfChangedWithLock(ref _interruptionCause, value, _interruptionCauseLock);
+            get => _interruptionCause;
+            private set
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(RfbConnection));
+                if (ReferenceEquals(_interruptionCause, value)) return;
+                _interruptionCause = value;
+                NotifyPropertyChanged();
+            }
         }
 
         /// <summary>
@@ -111,8 +130,9 @@ namespace MarcusW.VncClient
         /// </summary>
         public ConnectionState ConnectionState
         {
-            // We use Interlocked here so we can use the connection state value for some synchronization.
-            get => (ConnectionState)Interlocked.CompareExchange(ref Unsafe.As<ConnectionState, int>(ref _connectionState), 0, 0);
+            // Volatile.Read provides an atomic read with acquire semantics, which is sufficient
+            // for reading the current state. This avoids the previous Unsafe.As<> approach.
+            get => (ConnectionState)Volatile.Read(ref _connectionStateValue);
             private set => SetConnectionState(value);
         }
 
@@ -254,7 +274,7 @@ namespace MarcusW.VncClient
             // Mark the connection as interrupted (also avoids that this handler gets called twice per connection)
             // Use CompareExchange to ensure we only transition from Connected to Interrupted once
             var previousState = (ConnectionState)Interlocked.CompareExchange(
-                ref Unsafe.As<ConnectionState, int>(ref _connectionState), 
+                ref _connectionStateValue, 
                 (int)ConnectionState.Interrupted, 
                 (int)ConnectionState.Connected);
             
@@ -371,8 +391,8 @@ namespace MarcusW.VncClient
 
             SetConnectionState(ConnectionState.Closed, "Dispose called");
 
-            // Acquire the lock to ensure the connection setup is completed before destroying anything.
-            // Also ensures no new connections are set up after this point because the lock is never released.
+            // Acquire the semaphore to ensure any in-flight connection setup completes before cleanup.
+            // The CTS cancellation above should cause reconnect to release the semaphore promptly.
             _connectionManagementSemaphore.Wait();
             try
             {
@@ -384,10 +404,18 @@ namespace MarcusW.VncClient
                 // Should not happen.
                 Debug.Fail("Cleaning up previous connection failed unexpectedly.", ex.ToString());
             }
+            finally
+            {
+                _connectionManagementSemaphore.Release();
+            }
 
             _reconnectCts.Dispose();
             _connectionManagementSemaphore.Dispose();
 
+            // Mark as disposed AFTER all cleanup is complete.
+            // Setting this earlier would cause property setters (InterruptionCause, etc.) to throw
+            // ObjectDisposedException while background threads are still shutting down, leading to
+            // cascading failures during the reconnect/cleanup path.
             _disposed = true;
         }
     }

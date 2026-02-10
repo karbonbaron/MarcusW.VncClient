@@ -8,12 +8,20 @@ namespace MarcusW.VncClient
 {
     public partial class RfbConnection
     {
+        /// <summary>
+        /// Gets a value under a lock. Required for value types where reads may not be atomic
+        /// (e.g., structs larger than pointer size like <see cref="PixelFormat"/> or <see cref="Size"/>).
+        /// </summary>
         private T GetWithLock<T>(ref T backingField, object lockObject)
         {
             lock (lockObject)
                 return backingField;
         }
 
+        /// <summary>
+        /// Sets a value under a lock and raises PropertyChanged if the value changed.
+        /// Required for value types where reads/writes may not be atomic.
+        /// </summary>
         private void RaiseAndSetIfChangedWithLock<T>(ref T backingField, T newValue, object lockObject, [CallerMemberName] string propertyName = "")
         {
             if (_disposed)
@@ -36,7 +44,7 @@ namespace MarcusW.VncClient
         {
             // Atomically read current state and update to new state
             var previousState = (ConnectionState)Interlocked.Exchange(
-                ref Unsafe.As<ConnectionState, int>(ref _connectionState), 
+                ref _connectionStateValue, 
                 (int)newState);
             
             // Only raise events if the state actually changed

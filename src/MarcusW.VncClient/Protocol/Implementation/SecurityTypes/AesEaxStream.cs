@@ -1,5 +1,7 @@
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,6 +17,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
     /// <remarks>
     /// Each message is framed as: [2-byte length][encrypted message][16-byte MAC]
     /// The 2-byte length is associated data, and a 16-byte little-endian counter is the nonce.
+    /// Uses ArrayPool to minimize GC pressure from per-frame allocations, which is critical
+    /// for memory-constrained devices like Raspberry Pi 3.
     /// </remarks>
     internal class AesEaxStream : Stream
     {
@@ -25,18 +29,16 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
         private ulong _readCounter;
         private const int MacSize = 16;
         private const int NonceSize = 16;
-        
-        // Debug logging helper - commented out for production, uncomment if needed for troubleshooting
-        //private static void LogBytes(string label, byte[] data)
-        //{
-        //    var hex = BitConverter.ToString(data).Replace("-", " ");
-        //    var msg = $"[AES-EAX] {label}: {hex}";
-        //    Console.WriteLine(msg);
-        //    System.Diagnostics.Debug.WriteLine(msg);
-        //}
-        
-        // Read buffer for incoming messages
+
+        // Diagnostic counters for debug logging
+        private long _totalReads;
+        private long _totalWrites;
+        private long _totalBytesDecrypted;
+        private long _totalBytesEncrypted;
+
+        // Read buffer for incoming messages - uses ArrayPool to reduce GC pressure
         private byte[] _readBuffer = Array.Empty<byte>();
+        private bool _readBufferFromPool;
         private int _readPosition;
         private int _readLength;
 
@@ -90,55 +92,56 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 return toCopy;
             }
 
-            // Need to read and decrypt a new message
-            _readPosition = 0;
-            _readLength = 0;
+            // Return the previous read buffer to the pool before reading a new frame
+            ReturnReadBuffer();
 
             // Read message length (2 bytes, big-endian)
-            Span<byte> lengthBuffer = stackalloc byte[2];
+            Span<byte> lengthBytes = stackalloc byte[2];
             int lengthRead = 0;
             while (lengthRead < 2)
             {
-                int read = _baseStream.Read(lengthBuffer.Slice(lengthRead));
+                int read = _baseStream.Read(lengthBytes.Slice(lengthRead));
                 if (read == 0)
                     return 0; // End of stream
                 lengthRead += read;
             }
 
-            ushort messageLength = BinaryPrimitives.ReadUInt16BigEndian(lengthBuffer);
+            ushort messageLength = BinaryPrimitives.ReadUInt16BigEndian(lengthBytes);
 
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] READ: Counter={_readCounter}, MessageLength={messageLength}";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
-            //LogBytes("READ: Length buffer", lengthBuffer.ToArray());
-
-            // Read encrypted message + MAC
+            // Read encrypted message + MAC using a pooled buffer
             int ciphertextLength = messageLength + MacSize;
-            byte[] ciphertext = new byte[ciphertextLength];
-            int totalRead = 0;
-            while (totalRead < ciphertextLength)
+            byte[] ciphertext = ArrayPool<byte>.Shared.Rent(ciphertextLength);
+            try
             {
-                int read = _baseStream.Read(ciphertext, totalRead, ciphertextLength - totalRead);
-                if (read == 0)
-                    throw new EndOfStreamException("Unexpected end of stream while reading AES-EAX message");
-                totalRead += read;
+                int totalRead = 0;
+                while (totalRead < ciphertextLength)
+                {
+                    int read = _baseStream.Read(ciphertext, totalRead, ciphertextLength - totalRead);
+                    if (read == 0)
+                        throw new EndOfStreamException("Unexpected end of stream while reading AES-EAX message");
+                    totalRead += read;
+                }
+
+                // Prepare associated data (2-byte length) as local buffer
+                byte[] lengthAd = new byte[] { lengthBytes[0], lengthBytes[1] };
+
+                // Decrypt with AES-EAX into a pooled buffer
+                int plaintextLength = DecryptMessagePooled(ciphertext, ciphertextLength, lengthAd, _serverSessionKey, _readCounter,
+                    out byte[] plaintextBuffer);
+                _readBuffer = plaintextBuffer;
+                _readBufferFromPool = true;
+                _readLength = plaintextLength;
+                _readPosition = 0;
+                _readCounter++;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(ciphertext);
             }
 
-            // Debug logging - uncomment if needed for troubleshooting
-            //LogBytes("READ: Ciphertext+MAC", ciphertext);
-            //LogBytes("READ: Server session key", _serverSessionKey);
-
-            // Decrypt with AES-EAX
-            _readBuffer = DecryptMessage(ciphertext, lengthBuffer.ToArray(), _serverSessionKey, _readCounter);
-            _readLength = _readBuffer.Length;
-            _readPosition = 0;
-            _readCounter++;
-            
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] READ: Decrypted {_readLength} bytes successfully";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
+            _totalReads++;
+            _totalBytesDecrypted += _readLength;
+            Debug.WriteLine($"[AesEaxStream] Read: decrypted frame #{_readCounter} ({_readLength} bytes). TotalReads={_totalReads}, TotalDecrypted={_totalBytesDecrypted}");
 
             // Return as much as requested
             int bytesToReturn = Math.Min(count, _readLength);
@@ -154,108 +157,101 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             if (offset < 0 || count < 0 || offset + count > buffer.Length)
                 throw new ArgumentOutOfRangeException();
 
-            // Extract the data to encrypt
-            byte[] plaintext = new byte[count];
-            Array.Copy(buffer, offset, plaintext, 0, count);
-
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] WRITE: Counter={_writeCounter}, PlaintextLength={count}";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
-            //LogBytes("WRITE: Plaintext", plaintext);
-            //LogBytes("WRITE: Client session key", _clientSessionKey);
-
-            // Encrypt with AES-EAX
+            // Prepare associated data (2-byte length) as local buffer
             byte[] lengthBuffer = new byte[2];
             BinaryPrimitives.WriteUInt16BigEndian(lengthBuffer, (ushort)count);
 
-            byte[] ciphertext = EncryptMessage(plaintext, lengthBuffer, _clientSessionKey, _writeCounter);
+            // Encrypt with AES-EAX using pooled output buffer
+            int ciphertextLength = EncryptMessagePooled(buffer, offset, count, lengthBuffer, _clientSessionKey, _writeCounter,
+                out byte[] ciphertext);
             _writeCounter++;
+            _totalWrites++;
+            _totalBytesEncrypted += count;
+            Debug.WriteLine($"[AesEaxStream] Write: encrypted frame #{_writeCounter} ({count} bytes plaintext -> {ciphertextLength} bytes ciphertext). TotalWrites={_totalWrites}, TotalEncrypted={_totalBytesEncrypted}");
 
-            // Debug logging - uncomment if needed for troubleshooting
-            //LogBytes("WRITE: Length buffer", lengthBuffer);
-            //LogBytes("WRITE: Ciphertext+MAC", ciphertext);
-
-            // Write: [2-byte length][encrypted message + MAC]
-            _baseStream.Write(lengthBuffer, 0, 2);
-            _baseStream.Write(ciphertext, 0, ciphertext.Length);
-            
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] WRITE: Sent {ciphertext.Length} bytes (including MAC)";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
+            try
+            {
+                // Write: [2-byte length][encrypted message + MAC]
+                _baseStream.Write(lengthBuffer, 0, 2);
+                _baseStream.Write(ciphertext, 0, ciphertextLength);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(ciphertext);
+            }
         }
 
-        private static byte[] EncryptMessage(byte[] plaintext, byte[] associatedData, byte[] key, ulong counter)
+        /// <summary>
+        /// Encrypts plaintext using AES-EAX mode, returning a pooled buffer.
+        /// Caller MUST return the buffer to ArrayPool when done.
+        /// </summary>
+        private static int EncryptMessagePooled(byte[] plaintext, int plaintextOffset, int plaintextLength,
+            byte[] associatedData, byte[] key, ulong counter, out byte[] ciphertextBuffer)
         {
-            // Create nonce from counter (16 bytes, little-endian)
+            // Allocate nonce per-call (16 bytes - negligible) to avoid thread-safety issues
+            // between concurrent Read (decrypt) and Write (encrypt) operations
             byte[] nonce = new byte[NonceSize];
             BinaryPrimitives.WriteUInt64LittleEndian(nonce, counter);
-
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] ENCRYPT: Counter={counter}";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
-            //LogBytes("ENCRYPT: Nonce", nonce);
-            //LogBytes("ENCRYPT: Associated data", associatedData);
 
             // Initialize EAX cipher
             var cipher = new EaxBlockCipher(new AesEngine());
             cipher.Init(true, new AeadParameters(new KeyParameter(key), MacSize * 8, nonce, associatedData));
 
-            // Encrypt
-            byte[] ciphertext = new byte[cipher.GetOutputSize(plaintext.Length)];
-            int len = cipher.ProcessBytes(plaintext, 0, plaintext.Length, ciphertext, 0);
-            cipher.DoFinal(ciphertext, len);
+            // Encrypt into a pooled buffer
+            int outputSize = cipher.GetOutputSize(plaintextLength);
+            ciphertextBuffer = ArrayPool<byte>.Shared.Rent(outputSize);
+            int len = cipher.ProcessBytes(plaintext, plaintextOffset, plaintextLength, ciphertextBuffer, 0);
+            len += cipher.DoFinal(ciphertextBuffer, len);
 
-            return ciphertext;
+            return len;
         }
 
-        private static byte[] DecryptMessage(byte[] ciphertext, byte[] associatedData, byte[] key, ulong counter)
+        /// <summary>
+        /// Decrypts ciphertext using AES-EAX mode, returning a pooled buffer.
+        /// Caller MUST return the buffer to ArrayPool when done.
+        /// </summary>
+        private static int DecryptMessagePooled(byte[] ciphertext, int ciphertextLength,
+            byte[] associatedData, byte[] key, ulong counter, out byte[] plaintextBuffer)
         {
-            // Create nonce from counter (16 bytes, little-endian)
+            // Allocate nonce per-call (16 bytes - negligible) to avoid thread-safety issues
+            // between concurrent Read (decrypt) and Write (encrypt) operations
             byte[] nonce = new byte[NonceSize];
             BinaryPrimitives.WriteUInt64LittleEndian(nonce, counter);
-
-            // Debug logging - uncomment if needed for troubleshooting
-            //var msg = $"[AES-EAX] DECRYPT: Counter={counter}";
-            //Console.WriteLine(msg);
-            //System.Diagnostics.Debug.WriteLine(msg);
-            //LogBytes("DECRYPT: Nonce", nonce);
-            //LogBytes("DECRYPT: Associated data", associatedData);
 
             // Initialize EAX cipher
             var cipher = new EaxBlockCipher(new AesEngine());
             cipher.Init(false, new AeadParameters(new KeyParameter(key), MacSize * 8, nonce, associatedData));
 
-            // Decrypt
-            byte[] plaintext = new byte[cipher.GetOutputSize(ciphertext.Length)];
-            int len = cipher.ProcessBytes(ciphertext, 0, ciphertext.Length, plaintext, 0);
+            // Decrypt into a pooled buffer
+            int outputSize = cipher.GetOutputSize(ciphertextLength);
+            plaintextBuffer = ArrayPool<byte>.Shared.Rent(outputSize);
+            int len = cipher.ProcessBytes(ciphertext, 0, ciphertextLength, plaintextBuffer, 0);
             try
             {
-                len += cipher.DoFinal(plaintext, len);
-                
-                // Debug logging - uncomment if needed for troubleshooting
-                //var msg = $"[AES-EAX] DECRYPT: Success, plaintext length={len}";
-                //Console.WriteLine(msg);
-                //System.Diagnostics.Debug.WriteLine(msg);
-                //if (len > 0 && len <= 100)
-                //    LogBytes("DECRYPT: Plaintext", plaintext.Take(len).ToArray());
+                len += cipher.DoFinal(plaintextBuffer, len);
             }
             catch (Exception ex)
             {
-                // Debug logging - uncomment if needed for troubleshooting
-                //var msg = $"[AES-EAX] DECRYPT: FAILED - MAC verification error";
-                //Console.WriteLine(msg);
-                //System.Diagnostics.Debug.WriteLine(msg);
+                ArrayPool<byte>.Shared.Return(plaintextBuffer);
                 throw new InvalidOperationException("AES-EAX decryption failed - MAC verification error", ex);
             }
 
-            // Trim to actual length
-            if (len != plaintext.Length)
-                Array.Resize(ref plaintext, len);
+            return len;
+        }
 
-            return plaintext;
+        /// <summary>
+        /// Returns the current read buffer to the pool if it was rented.
+        /// </summary>
+        private void ReturnReadBuffer()
+        {
+            if (_readBufferFromPool && _readBuffer.Length > 0)
+            {
+                ArrayPool<byte>.Shared.Return(_readBuffer);
+            }
+            _readBuffer = Array.Empty<byte>();
+            _readBufferFromPool = false;
+            _readPosition = 0;
+            _readLength = 0;
         }
 
         public override void Flush() => _baseStream.Flush();
@@ -271,7 +267,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
                 // Don't dispose the base stream - it's managed by the base transport
                 Array.Clear(_clientSessionKey, 0, _clientSessionKey.Length);
                 Array.Clear(_serverSessionKey, 0, _serverSessionKey.Length);
-                Array.Clear(_readBuffer, 0, _readBuffer.Length);
+
+                // Return the read buffer to the pool before clearing
+                ReturnReadBuffer();
             }
             base.Dispose(disposing);
         }

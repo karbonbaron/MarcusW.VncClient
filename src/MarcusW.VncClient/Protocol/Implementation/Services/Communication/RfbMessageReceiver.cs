@@ -70,16 +70,19 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
             Span<byte> messageTypeBuffer = stackalloc byte[1];
             int messageCount = 0;
 
+            _logger.LogDebug("Receive loop started. Waiting for messages...");
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 ++messageCount;
                 
                 // Read message type
+                _logger.LogDebug("Waiting for message #{messageCount}...", messageCount);
                 int bytesRead = transportStream.Read(messageTypeBuffer);
                 
                 if (bytesRead == 0)
                 {
-                    // Stream ended - server closed connection
+                    _logger.LogWarning("Stream returned 0 bytes (server closed connection) at message #{messageCount}.", messageCount);
                     throw new UnexpectedEndOfStreamException("Stream reached its end while reading next message type.");
                 }
                 byte messageTypeId = messageTypeBuffer[0];
@@ -87,8 +90,8 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                 // Find message type
                 if (!incomingMessageLookup.TryGetValue(messageTypeId, out IIncomingMessageType messageType))
                 {
-                    _logger.LogWarning("Server sent unsupported message type {MessageTypeId}. This is likely a protocol extension that this client doesn't support. " +
-                        "The connection will be closed gracefully to avoid protocol desynchronization.", messageTypeId);
+                    _logger.LogWarning("Server sent unsupported message type {MessageTypeId} at message #{messageCount}. This is likely a protocol extension that this client doesn't support. " +
+                        "The connection will be closed gracefully to avoid protocol desynchronization.", messageTypeId, messageCount);
                     
                     // We can't safely skip unknown message types since we don't know their length
                     // Continuing could cause protocol stream desynchronization
@@ -97,7 +100,7 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                     return;
                 }
 
-                // Removed verbose per-message debug logging for production use
+                _logger.LogDebug("Received message #{messageCount}: {messageName} (id={messageTypeId}).", messageCount, messageType.Name, messageTypeId);
 
                 // Ensure the message type is marked as used
                 if (!messageType.IsStandardMessageType)
@@ -105,7 +108,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
 
                 // Read the message
                 messageType.ReadMessage(transport, cancellationToken);
+                _logger.LogDebug("Finished processing message #{messageCount}: {messageName}.", messageCount, messageType.Name);
             }
+            _logger.LogDebug("Receive loop ended (cancellation requested). Total messages processed: {messageCount}.", messageCount);
         }
     }
 }
