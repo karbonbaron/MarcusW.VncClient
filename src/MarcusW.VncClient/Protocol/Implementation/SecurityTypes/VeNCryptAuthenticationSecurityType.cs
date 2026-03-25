@@ -299,69 +299,41 @@ namespace MarcusW.VncClient.Protocol.Implementation.SecurityTypes
             await stream.WriteAsync(payload, 0, payload.Length, cancellationToken).ConfigureAwait(false);
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
 
-            // Read 1-byte authentication result
-            byte[] resultBuf = await ReadExactAsync(stream, 1, cancellationToken).ConfigureAwait(false);
-            
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                // VeNCrypt authentication result debug logging removed for production
-            }
+            // Read 4-byte SecurityResult (U32) per RFB specification
+            byte[] resultBuf = await ReadExactAsync(stream, 4, cancellationToken).ConfigureAwait(false);
+            uint result = (uint)IPAddress.NetworkToHostOrder(BitConverter.ToInt32(resultBuf, 0));
 
-            if (resultBuf[0] == 0)
+            if (result == 0)
             {
-                // Authentication succeeded
                 logger.LogInformation("VeNCrypt authentication completed successfully - creating SSL transport");
                 ITransport transport = new SSLTransport(stream);
                 return new AuthenticationResult(transport, false);
             }
             else
             {
-                // Authentication failed - server may send additional error data
-                logger.LogError("VeNCrypt authentication failed with result code: {ResultCode}", resultBuf[0]);
-                
-                // Based on the hex dump analysis, the server is sending error data after the failure code
-                // Try to read and clear any remaining error data to prevent it from corrupting subsequent reads
+                logger.LogError("VeNCrypt authentication failed with SecurityResult: {ResultCode}", result);
+
+                string errorMessage = "VeNCrypt Plain authentication failed.";
                 try
                 {
-                    // Peek ahead to see if there's more data (like an error message)
-                    // The format appears to be: 3 more bytes + 4-byte length + message
-                    
-                    // Try to read what appears to be additional error response data
-                    byte[] additionalBytes = new byte[7]; // Try to read next 7 bytes to see the pattern
-                    int bytesRead = 0;
-                    int totalToRead = 7;
-                    
-                    while (bytesRead < totalToRead)
+                    byte[] reasonLenBuf = await ReadExactAsync(stream, 4, cancellationToken).ConfigureAwait(false);
+                    uint reasonLen = (uint)IPAddress.NetworkToHostOrder(BitConverter.ToInt32(reasonLenBuf, 0));
+
+                    if (reasonLen > 0 && reasonLen < 4096)
                     {
-                        int currentRead = await stream.ReadAsync(additionalBytes, bytesRead, totalToRead - bytesRead, cancellationToken).ConfigureAwait(false);
-                        if (currentRead == 0) break; // No more data
-                        bytesRead += currentRead;
-                    }
-                    
-                    if (bytesRead >= 7)
-                    {
-                        logger.LogDebug("Additional error data: {ErrorData}", Convert.ToHexString(additionalBytes[0..bytesRead]));
-                        
-                        // Try to parse as: 3 bytes + 4-byte length
-                        uint errorLength = (uint)IPAddress.NetworkToHostOrder(BitConverter.ToInt32(additionalBytes, 3));
-                        logger.LogDebug("Potential error message length: {Length}", errorLength);
-                        
-                        if (errorLength > 0 && errorLength < 1024) // Reasonable error message length
-                        {
-                            byte[] errorBytes = await ReadExactAsync(stream, (int)errorLength, cancellationToken).ConfigureAwait(false);
-                            string errorMessage = Encoding.UTF8.GetString(errorBytes).Trim();
-                            
-                            logger.LogError("VeNCrypt server error message: '{ErrorMessage}'", errorMessage);
-                            throw new InvalidOperationException($"VeNCrypt authentication failed: {errorMessage}");
-                        }
+                        byte[] reasonBuf = await ReadExactAsync(stream, (int)reasonLen, cancellationToken).ConfigureAwait(false);
+                        string reason = Encoding.UTF8.GetString(reasonBuf).Trim();
+                        logger.LogError("VeNCrypt server error: '{Reason}'", reason);
+                        errorMessage = $"VeNCrypt authentication failed: {reason}";
                     }
                 }
+                catch (InvalidOperationException) { throw; }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Failed to read VeNCrypt error details - this may cause protocol parsing issues");
+                    logger.LogWarning(ex, "Failed to read VeNCrypt error reason from server");
                 }
-                
-                throw new InvalidOperationException("VeNCrypt Plain authentication failed.");
+
+                throw new InvalidOperationException(errorMessage);
             }
         }
 

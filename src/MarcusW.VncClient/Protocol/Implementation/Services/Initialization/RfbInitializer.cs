@@ -112,40 +112,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Initialization
             Size framebufferSize;
             PixelFormat pixelFormat;
             
-            // Check if VeNCrypt security type was used (which requires 3 bytes padding)
-            // Only VeNCrypt requires this padding, not other SSL-based security types like TLS or SecureTunnel
-            bool isVeNCryptAuth = _context.State is Protocol.Implementation.ProtocolState protocolState && 
-                                  protocolState.UsedSecurityType?.Id == (byte)Protocol.SecurityTypes.WellKnownSecurityType.VeNCrypt;
-            
-            // Removed VeNCrypt detection debug logging for production use
-            
-            if (isVeNCryptAuth)
-            {
-                // Try VeNCrypt parsing first (with 3-byte padding), but fall back to standard if invalid
-                // Modern WayVNC servers may not follow the old VeNCrypt padding convention
-                
-                try
-                {
-                framebufferSize = GetFramebufferSize(headerBytes.Span[3..7]);
-                    _logger.LogInformation("VeNCrypt (padded) framebuffer size: {Width}x{Height}", framebufferSize.Width, framebufferSize.Height);
-                pixelFormat = GetPixelFormat(headerBytes.Span[7..20]);
-                }
-                catch (UnexpectedDataException ex) when (ex.Message.Contains("bits per pixel") || ex.Message.Contains("depth") || ex.Message.Contains("shift") || ex.Message.Contains("overlap") || ex.Message.Contains("RGB"))
-                {
-                    _logger.LogWarning("VeNCrypt parsing with 3-byte padding failed, trying standard parsing: {Error}", ex.Message);
-                    // VeNCrypt padding failed, trying standard parsing
-                    // Fallback to standard parsing
-                    framebufferSize = GetFramebufferSize(headerBytes.Span[..4]);
-                    pixelFormat = GetPixelFormat(headerBytes.Span[4..20]);
-                    _logger.LogInformation("Successfully parsed VeNCrypt server init using standard format (no padding)");
-                }
-            }
-            else
-            {
-                // Using standard parsing for non-VeNCrypt connections
-                framebufferSize = GetFramebufferSize(headerBytes.Span[..4]);
-                pixelFormat = GetPixelFormat(headerBytes.Span[4..20]);
-            }
+            // Standard RFB ServerInit parsing: first 4 bytes = framebuffer size, next 16 bytes = pixel format
+            framebufferSize = GetFramebufferSize(headerBytes.Span[..4]);
+            pixelFormat = GetPixelFormat(headerBytes.Span[4..20]);
             uint desktopNameLength = BinaryPrimitives.ReadUInt32BigEndian(headerBytes.Span[20..24]);
 
             // Removed desktop name length debug logging for production use
@@ -558,11 +527,9 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Initialization
 
                 _logger.LogError("Final WayVNC authentication error: '{ErrorMessage}'", errorMessage);
 
-                // Throw a specific exception for this newer WayVNC authentication failure
                 throw new InvalidOperationException($"WayVNC post-authentication validation failed: {errorMessage}. " +
-                    "This appears to be a newer WayVNC version with two-stage authentication. " +
-                    "The VeNCrypt handshake succeeded, but additional credential validation failed during ServerInit. " +
-                    "Check that the username 'sysadmin' exists and has VNC access permissions on the server.");
+                    "The VeNCrypt handshake succeeded, but the server rejected the connection during ServerInit. " +
+                    "Verify that the provided username and password are correct and that the user has VNC access permissions on the server.");
                 
                 // Note: No need to read additional bytes since the error message seems to be contained in the first 24 bytes
             }
