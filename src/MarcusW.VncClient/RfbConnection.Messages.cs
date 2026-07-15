@@ -39,7 +39,17 @@ namespace MarcusW.VncClient
             if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            messageSender!.EnqueueMessage(message, cancellationToken);
+            try
+            {
+                messageSender!.EnqueueMessage(message, cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+                // The connection failed or was cleaned up concurrently (e.g. while a reconnect is in progress).
+                // Just report that the message could not be queued instead of throwing into UI event handlers.
+                return false;
+            }
+
             return true;
         }
 
@@ -57,7 +67,16 @@ namespace MarcusW.VncClient
             if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            messageSender!.EnqueueFramebufferUpdateRequest(rectangle, incremental, cancellationToken);
+            try
+            {
+                messageSender!.EnqueueFramebufferUpdateRequest(rectangle, incremental, cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Sender disappeared concurrently, see EnqueueMessage.
+                return false;
+            }
+
             return true;
         }
 
@@ -76,7 +95,16 @@ namespace MarcusW.VncClient
             if (!TryGetMessageSender(out var messageSender))
                 return false;
 
-            messageSender!.EnqueueFramebufferUpdateRequestDelayed(rectangle, incremental, delay, cancellationToken);
+            try
+            {
+                messageSender!.EnqueueFramebufferUpdateRequestDelayed(rectangle, incremental, delay, cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Sender disappeared concurrently, see EnqueueMessage.
+                return false;
+            }
+
             return true;
         }
 
@@ -98,7 +126,15 @@ namespace MarcusW.VncClient
             if (!TryGetMessageSender(out var messageSender))
                 return Task.CompletedTask;
 
-            return messageSender!.SendMessageAndWaitAsync(message, cancellationToken);
+            try
+            {
+                return messageSender!.SendMessageAndWaitAsync(message, cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Sender disappeared concurrently, see EnqueueMessage. Behave like the "no sender" case above.
+                return Task.CompletedTask;
+            }
         }
     }
 }

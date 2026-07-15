@@ -49,9 +49,10 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Handshaking
             _state.UsedSecurityType = usedSecurityType;
 
             // Execute authentication
-            // Removed debug logging for production use
+            // Use the connection's caching handler (instead of Parameters.AuthenticationHandler directly)
+            // so automatic reconnects can reuse previously provided credentials without prompting the user again.
             AuthenticationResult authenticationResult = await usedSecurityType
-                .AuthenticateAsync(_context.Connection.Parameters.AuthenticationHandler, cancellationToken).ConfigureAwait(false);
+                .AuthenticateAsync(_context.Connection.AuthenticationHandler, cancellationToken).ConfigureAwait(false);
 
             // When a tunnel was built, use that transport for further communication
             if (authenticationResult.TunnelTransport != null)

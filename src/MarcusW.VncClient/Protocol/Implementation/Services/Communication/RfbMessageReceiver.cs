@@ -90,14 +90,16 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
                 // Find message type
                 if (!incomingMessageLookup.TryGetValue(messageTypeId, out IIncomingMessageType messageType))
                 {
-                    _logger.LogWarning("Server sent unsupported message type {MessageTypeId} at message #{messageCount}. This is likely a protocol extension that this client doesn't support. " +
-                        "The connection will be closed gracefully to avoid protocol desynchronization.", messageTypeId, messageCount);
-                    
-                    // We can't safely skip unknown message types since we don't know their length
-                    // Continuing could cause protocol stream desynchronization
-                    // The best approach is to gracefully terminate the receive loop
-                    // This will trigger a reconnection attempt if auto-reconnect is enabled
-                    return;
+                    _logger.LogWarning("Server sent unsupported message type {MessageTypeId} at message #{messageCount}. This is likely a protocol extension that this client doesn't support " +
+                        "or the protocol stream got desynchronized. The connection will be interrupted to trigger a reconnect.", messageTypeId, messageCount);
+
+                    // We can't safely skip unknown message types since we don't know their length.
+                    // Continuing could cause protocol stream desynchronization.
+                    // Throwing here raises the thread's Failed event, which marks the connection
+                    // as interrupted and triggers a reconnect (a plain "return" would end the
+                    // receive loop silently and leave the connection stuck in the Connected state).
+                    throw new UnexpectedDataException($"Server sent a message of unsupported type {messageTypeId}. "
+                        + "Closing the connection to avoid protocol stream desynchronization.");
                 }
 
                 _logger.LogDebug("Received message #{messageCount}: {messageName} (id={messageTypeId}).", messageCount, messageType.Name, messageTypeId);

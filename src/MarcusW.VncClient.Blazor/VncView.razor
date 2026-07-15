@@ -97,11 +97,58 @@
             <p>No VNC connection</p>
         </div>
     }
+    else if (_connection.ConnectionState is ConnectionState.Interrupted or ConnectionState.Reconnecting or ConnectionState.ReconnectFailed)
+    {
+        <div class="vnc-connection-overlay">
+            <div class="vnc-connection-overlay-content">
+                <div class="spinner-border text-light mb-2" role="status" aria-hidden="true"></div>
+                <p class="mb-1">
+                    @(_connection.ConnectionState switch
+                    {
+                        ConnectionState.Interrupted => "Connection lost",
+                        ConnectionState.Reconnecting => "Reconnecting…",
+                        _ => "Reconnect failed, retrying…"
+                    })
+                </p>
+                @if (_connection.ReconnectAttemptCount > 0)
+                {
+                    <small>Attempt @_connection.ReconnectAttemptCount</small>
+                }
+            </div>
+        </div>
+    }
+    else if (_connection.ConnectionState == ConnectionState.Closed)
+    {
+        <div class="vnc-connection-overlay">
+            <div class="vnc-connection-overlay-content">
+                <p class="mb-0">Connection closed</p>
+            </div>
+        </div>
+    }
 </div>
 
 <style>
     .vnc-viewer canvas {
         cursor: default;
+    }
+    
+    .vnc-connection-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.6);
+        /* Above the canvas and menu, but below application dialogs/modals
+           (e.g. Bootstrap modals use ~1055), so credential prompts stay visible. */
+        z-index: 100;
+        pointer-events: all;
+    }
+    
+    .vnc-connection-overlay-content {
+        color: #fff;
+        text-align: center;
+        font-size: 1rem;
     }
     
     .vnc-viewer canvas:focus {
@@ -542,8 +589,10 @@
 
     private void OnConnectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(RfbConnection.ConnectionState) && 
-            _connection?.ConnectionState == ConnectionState.Connected)
+        if (_disposed || e.PropertyName != nameof(RfbConnection.ConnectionState))
+            return;
+
+        if (_connection?.ConnectionState == ConnectionState.Connected)
         {
             // Do NOT send an extra non-incremental FramebufferUpdateRequest here.
             // The protocol layer (RfbMessageSender.EnqueueInitialMessages) already sends
@@ -554,6 +603,10 @@
             // Set up clipboard monitoring when connected
             InvokeAsync(SetupClipboardMonitoringAsync);
         }
+
+        // Re-render on every state change so the reconnect overlay and the special keys
+        // menu reflect the current connection state (Interrupted, Reconnecting, Connected, ...).
+        InvokeAsync(StateHasChanged);
     }
     
     private async Task SetupClipboardMonitoringAsync()
@@ -830,58 +883,110 @@
     }
 
     // Input event handlers - PERFORMANCE CRITICAL: Direct inline implementation
+    // IMPORTANT: These are "async void" event handlers. Any exception escaping them is rethrown
+    // on the renderer synchronization context and kills the whole Blazor circuit (frozen UI).
+    // Because the connection can fail concurrently (e.g. server reboot) between the state check
+    // and the enqueue call, all input handlers must never let exceptions escape.
     private async void OnMouseDown(MouseEventArgs e)
     {
-        if (_connection?.ConnectionState == ConnectionState.Connected)
+        try
         {
-            var buttons = GetMouseButtons(e);
-            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
-            _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+            if (_connection?.ConnectionState == ConnectionState.Connected)
+            {
+                var buttons = GetMouseButtons(e);
+                var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+                _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnMouseDown), ex);
         }
     }
 
     private async void OnMouseUp(MouseEventArgs e)
     {
-        if (_connection?.ConnectionState == ConnectionState.Connected)
+        try
         {
-            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
-            _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+            if (_connection?.ConnectionState == ConnectionState.Connected)
+            {
+                var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+                _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnMouseUp), ex);
         }
     }
 
     private async void OnMouseMove(MouseEventArgs e)
     {
-        if (_connection?.ConnectionState == ConnectionState.Connected)
+        try
         {
-            // Important: Track button state during move for text selection and drag operations
-            var buttons = GetMouseButtons(e);
-            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
-            _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+            if (_connection?.ConnectionState == ConnectionState.Connected)
+            {
+                // Important: Track button state during move for text selection and drag operations
+                var buttons = GetMouseButtons(e);
+                var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+                _connection.EnqueueMessage(new PointerEventMessage(position, buttons));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnMouseMove), ex);
         }
     }
 
     private async void OnWheel(WheelEventArgs e)
     {
-        if (_connection?.ConnectionState == ConnectionState.Connected)
+        try
         {
-            var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
-            var button = e.DeltaY > 0 ? MouseButtons.WheelUp : MouseButtons.WheelDown;
-            
-            // Send wheel press and release
-            _connection.EnqueueMessage(new PointerEventMessage(position, button));
-            _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+            if (_connection?.ConnectionState == ConnectionState.Connected)
+            {
+                var position = await ConvertCanvasToVncCoordinatesAsync(e.OffsetX, e.OffsetY);
+                var button = e.DeltaY > 0 ? MouseButtons.WheelUp : MouseButtons.WheelDown;
+                
+                // Send wheel press and release
+                _connection.EnqueueMessage(new PointerEventMessage(position, button));
+                _connection.EnqueueMessage(new PointerEventMessage(position, MouseButtons.None));
+            }
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnWheel), ex);
         }
     }
 
     // Keyboard event handlers - delegated to InputService
     private async void OnKeyDown(KeyboardEventArgs e)
     {
-        await inputService.HandleKeyDownAsync(e, _connection, ExitFullscreenAsync, _isFullscreen);
+        try
+        {
+            await inputService.HandleKeyDownAsync(e, _connection, ExitFullscreenAsync, _isFullscreen);
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnKeyDown), ex);
+        }
     }
 
     private async void OnKeyUp(KeyboardEventArgs e)
     {
-        await inputService.HandleKeyUpAsync(e, _connection, _isFullscreen);
+        try
+        {
+            await inputService.HandleKeyUpAsync(e, _connection, _isFullscreen);
+        }
+        catch (Exception ex)
+        {
+            LogInputError(nameof(OnKeyUp), ex);
+        }
+    }
+
+    private static void LogInputError(string handlerName, Exception ex)
+    {
+        // Input events during a connection interruption are expendable - never crash the circuit over them.
+        Console.WriteLine($"VNC: Ignored input error in {handlerName}: {ex.Message}");
     }
     
     // Focus handlers to provide visual feedback

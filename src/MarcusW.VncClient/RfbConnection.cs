@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MarcusW.VncClient.Output;
 using MarcusW.VncClient.Protocol;
 using MarcusW.VncClient.Rendering;
+using MarcusW.VncClient.Security;
 using Microsoft.Extensions.Logging;
 
 namespace MarcusW.VncClient
@@ -56,6 +57,21 @@ namespace MarcusW.VncClient
         /// Gets the connect parameters used for establishing this connection.
         /// </summary>
         public ConnectParameters Parameters { get; }
+
+        /// <summary>
+        /// Gets the authentication handler that should be used for handshakes on this connection.
+        /// Wraps the user-provided handler and caches inputs for reuse on automatic reconnects,
+        /// if enabled via <see cref="ConnectParameters.ReuseAuthenticationInputOnReconnect"/>.
+        /// </summary>
+        /// <remarks>
+        /// Created lazily because handshakes only happen after the parameters have been validated,
+        /// which guarantees a non-null <see cref="ConnectParameters.AuthenticationHandler"/>.
+        /// Lazy initialization is safe here since handshakes are synchronized by the connection management semaphore.
+        /// </remarks>
+        internal IAuthenticationHandler AuthenticationHandler
+            => _cachingAuthenticationHandler ??= new CachingAuthenticationHandler(Parameters.AuthenticationHandler, Parameters.ReuseAuthenticationInputOnReconnect);
+
+        private CachingAuthenticationHandler? _cachingAuthenticationHandler;
 
         /// <summary>
         /// Gets or sets the target where received frames should be rendered to.

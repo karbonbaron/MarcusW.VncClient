@@ -34,6 +34,9 @@ namespace MarcusW.VncClient
         private TimeSpan _desktopResizeUpdateDelay = TimeSpan.Zero;
         private TimeSpan _postInitializationDelay = TimeSpan.FromMilliseconds(200);
         private TimeSpan _postSetEncodingsDelay = TimeSpan.FromMilliseconds(100);
+        private TimeSpan _tcpKeepAliveTime = TimeSpan.FromSeconds(10);
+        private TimeSpan _tcpKeepAliveInterval = TimeSpan.FromSeconds(3);
+        private bool _reuseAuthenticationInputOnReconnect = true;
 
         /// <summary>
         /// Specifies the transport type and parameters to connect to.
@@ -193,6 +196,43 @@ namespace MarcusW.VncClient
             set => ThrowIfFrozen(() => _postSetEncodingsDelay = value);
         }
 
+        /// <summary>
+        /// Gets or sets the idle time after which TCP keepalive probes are sent to detect dead connections
+        /// (e.g. when the server was hard-rebooted without closing the connection).
+        /// Set to <see cref="TimeSpan.Zero"/> to disable TCP keepalive. Default is 10 seconds.
+        /// </summary>
+        public TimeSpan TcpKeepAliveTime
+        {
+            get => _tcpKeepAliveTime;
+            set => ThrowIfFrozen(() => _tcpKeepAliveTime = value);
+        }
+
+        /// <summary>
+        /// Gets or sets the interval between TCP keepalive probes when no response is received. Default is 3 seconds.
+        /// A dead connection is detected after roughly <see cref="TcpKeepAliveTime"/> plus a few probe intervals.
+        /// </summary>
+        public TimeSpan TcpKeepAliveInterval
+        {
+            get => _tcpKeepAliveInterval;
+            set => ThrowIfFrozen(() => _tcpKeepAliveInterval = value);
+        }
+
+        /// <summary>
+        /// Gets or sets whether authentication inputs (e.g. passwords) provided by the <see cref="AuthenticationHandler"/>
+        /// are cached in memory and reused for automatic reconnects, so the user doesn't get prompted again
+        /// every time the connection is re-established. Default is <see langword="true"/>.
+        /// </summary>
+        /// <remarks>
+        /// The cache is cleared automatically when a handshake fails, so the user gets prompted again if the
+        /// cached credentials have become invalid. Note that enabling this keeps the credentials in memory
+        /// for the lifetime of the connection object.
+        /// </remarks>
+        public bool ReuseAuthenticationInputOnReconnect
+        {
+            get => _reuseAuthenticationInputOnReconnect;
+            set => ThrowIfFrozen(() => _reuseAuthenticationInputOnReconnect = value);
+        }
+
         /// <inhertitdoc />
         public override void Validate()
         {
@@ -218,6 +258,10 @@ namespace MarcusW.VncClient
                 throw new ConnectParametersValidationException($"{nameof(PostInitializationDelay)} parameter must not be negative.");
             if (PostSetEncodingsDelay < TimeSpan.Zero)
                 throw new ConnectParametersValidationException($"{nameof(PostSetEncodingsDelay)} parameter must not be negative.");
+            if (TcpKeepAliveTime < TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(TcpKeepAliveTime)} parameter must not be negative.");
+            if (TcpKeepAliveInterval <= TimeSpan.Zero)
+                throw new ConnectParametersValidationException($"{nameof(TcpKeepAliveInterval)} parameter must be positive.");
         }
 
         /// <inheritdoc />

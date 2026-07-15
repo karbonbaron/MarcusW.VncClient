@@ -202,7 +202,16 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
             TMessageType messageType = GetAndCheckMessageType<TMessageType>();
 
             // Add message to queue
-            _queue.Add(new QueueItem(message, messageType), cancellationToken);
+            try
+            {
+                _queue.Add(new QueueItem(message, messageType), cancellationToken);
+            }
+            catch (InvalidOperationException)
+            {
+                // The queue was marked as complete because the send loop stopped or failed (e.g. the connection broke).
+                // Surface this as ObjectDisposedException so callers can treat it like any other "sender is gone" race.
+                throw new ObjectDisposedException(nameof(RfbMessageSender), "The send queue has been completed because the send loop stopped or failed.");
+            }
         }
 
         /// <inheritdoc />
@@ -353,7 +362,15 @@ namespace MarcusW.VncClient.Protocol.Implementation.Services.Communication
             var completionSource = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Add message to queue
-            _queue.Add(new QueueItem(message, messageType, completionSource), cancellationToken);
+            try
+            {
+                _queue.Add(new QueueItem(message, messageType, completionSource), cancellationToken);
+            }
+            catch (InvalidOperationException)
+            {
+                // See EnqueueMessage: the send loop stopped or failed concurrently.
+                throw new ObjectDisposedException(nameof(RfbMessageSender), "The send queue has been completed because the send loop stopped or failed.");
+            }
 
             return completionSource.Task;
         }
