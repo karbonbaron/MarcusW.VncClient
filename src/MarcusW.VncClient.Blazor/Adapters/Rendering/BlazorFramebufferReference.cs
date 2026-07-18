@@ -116,40 +116,44 @@ namespace MarcusW.VncClient.Blazor.Adapters.Rendering
             int width = size.Width;
             int height = size.Height;
             int bytesPerPixel = format.BitsPerPixel / 8;
+            int stride = width * bytesPerPixel;
             
-            int minX = width, minY = height, maxX = -1, maxY = -1;
-            bool hasChanges = false;
+            // Row-wise comparison using vectorized span operations instead of a per-pixel
+            // byte loop. Unchanged rows are skipped with a single SequenceEqual; for changed
+            // rows only the first and last differing byte are located to grow the x-range.
+            int minY = -1, maxY = -1;
+            int minXByte = stride, maxXByteExclusive = 0;
             
-            // Scan for changed pixels
             for (int y = 0; y < height; y++)
             {
-                for (int x = 0; x < width; x++)
+                ReadOnlySpan<byte> row = new ReadOnlySpan<byte>(_buffer, y * stride, stride);
+                ReadOnlySpan<byte> previousRow = new ReadOnlySpan<byte>(_previousBuffer, y * stride, stride);
+                
+                if (row.SequenceEqual(previousRow))
+                    continue;
+                
+                if (minY < 0) minY = y;
+                maxY = y;
+                
+                int firstDiff = row.CommonPrefixLength(previousRow);
+                if (firstDiff < minXByte)
+                    minXByte = firstDiff;
+                
+                // No need to search the tail if the x-range already spans to the row end
+                if (maxXByteExclusive < stride)
                 {
-                    int offset = (y * width + x) * bytesPerPixel;
-                    bool pixelChanged = false;
-                    
-                    // Compare pixel bytes
-                    for (int b = 0; b < bytesPerPixel; b++)
-                    {
-                        if (_buffer[offset + b] != _previousBuffer[offset + b])
-                        {
-                            pixelChanged = true;
-                            break;
-                        }
-                    }
-                    
-                    if (pixelChanged)
-                    {
-                        hasChanges = true;
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                    }
+                    int lastDiff = stride - 1;
+                    while (lastDiff > firstDiff && row[lastDiff] == previousRow[lastDiff])
+                        lastDiff--;
+                    if (lastDiff + 1 > maxXByteExclusive)
+                        maxXByteExclusive = lastDiff + 1;
                 }
             }
             
-            if (!hasChanges) return null;
+            if (minY < 0) return null;
+            
+            int minX = minXByte / bytesPerPixel;
+            int maxX = (maxXByteExclusive - 1) / bytesPerPixel;
             
             // Return the bounding rectangle of all changes
             return new Rectangle(minX, minY, maxX - minX + 1, maxY - minY + 1);

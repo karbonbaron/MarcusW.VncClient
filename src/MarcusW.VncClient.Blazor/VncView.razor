@@ -481,6 +481,20 @@
     // Rectangle-based rendering for dirty region updates
     private readonly List<Rectangle> _dirtyRectangles = new List<Rectangle>();
     private readonly object _dirtyRectanglesLock = new object();
+
+    // True while a render is scheduled on the dispatcher but has not started draining the
+    // dirty rectangles yet. Guarded by _dirtyRectanglesLock.
+    private bool _renderScheduled;
+
+    // When set, the canvas bitmap was reset (by an attribute resize or an explicit clear)
+    // and the next render must repaint the full framebuffer from the persistent buffer,
+    // because dirty-rectangle-only paints would otherwise leave the cleared regions black.
+    private bool _fullRedrawPending;
+
+    // Canvas size whose width/height attributes were last applied to the DOM. Compared in
+    // OnAfterRenderAsync to detect the exact render in which the browser resized (and
+    // thereby wiped) the canvas bitmap, so the full repaint happens strictly after the wipe.
+    private Size _lastRenderedCanvasSize = new Size(800, 600);
     
     // Fullscreen functionality
     private bool _isFullscreen = false;
@@ -540,6 +554,18 @@
             }
         }
         
+        // Detect the render in which new canvas width/height attributes were applied to the
+        // DOM. Applying these attributes resets the canvas bitmap to transparent, wiping
+        // everything painted so far. OnAfterRenderAsync runs only after the browser has
+        // acknowledged the DOM update, so repainting here is guaranteed to happen after the
+        // wipe - unlike a repaint scheduled at grab time, which could race and be wiped again.
+        if (!firstRender && _lastRenderedCanvasSize != canvasSize)
+        {
+            _lastRenderedCanvasSize = canvasSize;
+            _fullRedrawPending = true;
+            await RenderPersistentFramebuffer();
+        }
+        
         // Set up drag functionality for special keys menu (once when connected)
         if (_connection?.ConnectionState == ConnectionState.Connected && !_disposed && !_menuDragSetup)
         {
@@ -572,12 +598,16 @@
             ClearCanvasAndFramebuffer();
             
             // If connection is already established, request an incremental framebuffer update
-            // to catch up. The protocol layer already sent the initial non-incremental request,
-            // so we only need an incremental refresh here.
+            // to catch up. In the normal connect flow the component attaches right after the
+            // state turns Connected, i.e. BEFORE the initial full update (requested by the
+            // protocol layer) has arrived, so that full update still paints everything.
+            // Do NOT request a non-incremental update here: it would duplicate the initial
+            // request and force slow servers (e.g. RPi) to encode the entire screen twice,
+            // stalling delta updates for many seconds after connect.
             if (_connection.ConnectionState == ConnectionState.Connected)
             {
                 RequestIncrementalFramebufferUpdate();
-                
+
                 // Also set up clipboard monitoring if already connected
                 InvokeAsync(SetupClipboardMonitoringAsync);
             }
@@ -723,6 +753,8 @@
         if (sizeChanged)
         {
         canvasReference.Size = size;
+            // The queued render applies new width/height attributes, which resets the canvas
+            // bitmap. OnAfterRenderAsync detects that and forces a full repaint afterwards.
             InvokeAsync(StateHasChanged);
         }
 
@@ -748,34 +780,48 @@
 
     public void QueueFramebufferUpdate(byte[] data, Size size, PixelFormat format, Rectangle? dirtyRect = null)
     {
-        if (!_disposed)
+        if (_disposed)
+            return;
+
+        // The VNC library has already written directly to our persistent buffer via the
+        // IFramebufferReference.Address; the 'data' parameter references that same buffer.
+
+        bool scheduleRender;
+        lock (_dirtyRectanglesLock)
         {
-            // The VNC library has already written directly to our persistent buffer via the IFramebufferReference.Address
-            // The 'data' parameter is actually a reference to our persistent buffer
-            
             if (dirtyRect.HasValue)
             {
-                // Add dirty rectangle for optimized rendering
-                lock (_dirtyRectanglesLock)
-                {
-                    _dirtyRectangles.Add(dirtyRect.Value);
-                }
+                _dirtyRectangles.Add(dirtyRect.Value);
             }
-            
-            // PERFORMANCE CRITICAL: Immediate rendering for maximum responsiveness
-            InvokeAsync(async () =>
-            {
-                try
-                {
-                    await RenderPersistentFramebuffer();
-                    StateHasChanged();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error in immediate render: {ex.Message}");
-                }
-            });
+
+            // Coalesce render scheduling: with per-rectangle updates many QueueFramebufferUpdate
+            // calls can arrive before the first render runs. A single scheduled render drains
+            // all accumulated dirty rectangles, so scheduling more would only produce no-op
+            // (or worse, redundant) renders that stall the circuit's dispatcher.
+            scheduleRender = !_renderScheduled && (dirtyRect.HasValue || _fullRedrawPending);
+            if (scheduleRender)
+                _renderScheduled = true;
         }
+
+        if (!scheduleRender)
+            return;
+
+        InvokeAsync(async () =>
+        {
+            lock (_dirtyRectanglesLock)
+            {
+                _renderScheduled = false;
+            }
+
+            try
+            {
+                await RenderPersistentFramebuffer();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in immediate render: {ex.Message}");
+            }
+        });
     }
 
 
@@ -814,16 +860,34 @@
             if (_disposed)
                 return;
             
-            if (rectanglesToRender != null && rectanglesToRender.Count > 0)
+            // A full redraw is required when the canvas bitmap was reset (resize or explicit
+            // clear). Drop any dirty rectangles and repaint the entire persistent framebuffer,
+            // since the dirty regions alone cannot restore the cleared areas.
+            bool forceFullRedraw = false;
+            if (_fullRedrawPending)
+            {
+                forceFullRedraw = true;
+                _fullRedrawPending = false;
+                lock (_dirtyRectanglesLock)
+                {
+                    _dirtyRectangles.Clear();
+                }
+                rectanglesToRender = null;
+            }
+            
+            if (forceFullRedraw)
+            {
+                await renderingService.RenderFullFramebufferAsync($"vncCanvas_{_canvasId}", _persistentFramebuffer, _framebufferSize, _framebufferFormat.Value);
+            }
+            else if (rectanglesToRender != null && rectanglesToRender.Count > 0)
             {
                 // Render only dirty rectangles for better performance
                 await renderingService.RenderDirtyRectanglesAsync($"vncCanvas_{_canvasId}", _persistentFramebuffer, _framebufferSize, _framebufferFormat.Value, rectanglesToRender);
             }
-            else
-            {
-                // Fallback to full framebuffer rendering
-                await renderingService.RenderFullFramebufferAsync($"vncCanvas_{_canvasId}", _persistentFramebuffer, _framebufferSize, _framebufferFormat.Value);
-            }
+            // Nothing to draw: this render was scheduled redundantly (another render already
+            // drained the dirty rectangles). Doing a full-frame paint here - the old fallback -
+            // amplified every multi-rectangle update into repeated 8 MB transfers over SignalR,
+            // which is what caused multi-second catch-up lag after connecting.
         }
         catch (ObjectDisposedException)
         {

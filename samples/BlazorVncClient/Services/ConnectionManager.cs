@@ -34,8 +34,12 @@ namespace BlazorVncClient.Services
         {
             parameters.AuthenticationHandler = _interactiveAuthenticationHandler;
             
-            // Enable rectangle-based updates for better performance
-            parameters.RenderFlags |= RenderFlags.UpdateByRectangle;
+            // Do NOT enable RenderFlags.UpdateByRectangle for the Blazor render target:
+            // it makes the protocol grab/dispose a framebuffer reference per rectangle, and
+            // the Blazor adapter snapshots and diff-scans the entire framebuffer on every
+            // grab/dispose cycle. A multi-rectangle update (typical for full-screen changes)
+            // would multiply that cost by the rectangle count and stall rendering for seconds.
+            // Per-frame updates (the default) do one snapshot/diff/paint per update message.
 
             // Uncomment for debugging/visualization purposes
             //parameters.RenderFlags |= RenderFlags.VisualizeRectangles;
