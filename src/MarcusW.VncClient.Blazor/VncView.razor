@@ -18,11 +18,17 @@
 @inject IRenderingService renderingService
 @inject IFullscreenService fullscreenService
 
+@{
+    // Snapshot the canvas size used by THIS render. The VNC thread mutates canvasReference.Size
+    // concurrently, so OnAfterRenderAsync must compare against what this render actually wrote
+    // into the DOM attributes - not the live value, which may already be ahead of the DOM.
+    _renderingCanvasSize = canvasSize;
+}
 <div id="vnc-container-@_canvasId" class="vnc-viewer @(_isFullscreen ? "fullscreen" : "")" style="position: relative; display: inline-block;">
     <canvas @ref="_canvas" 
             id="vncCanvas_@_canvasId" 
-            width="@canvasSize.Width" 
-            height="@canvasSize.Height" 
+            width="@_renderingCanvasSize.Width" 
+            height="@_renderingCanvasSize.Height" 
             style="border: 1px solid #ddd; background-color: #000; max-width: @(_isFullscreen ? "100vw" : "100%"); max-height: @(_isFullscreen ? "100vh" : "70vh"); outline: none;"
             @onmousedown="OnMouseDown"
             @onmouseup="OnMouseUp"
@@ -495,6 +501,12 @@
     // OnAfterRenderAsync to detect the exact render in which the browser resized (and
     // thereby wiped) the canvas bitmap, so the full repaint happens strictly after the wipe.
     private Size _lastRenderedCanvasSize = new Size(800, 600);
+
+    // Canvas size written into the render tree by the most recent render. Set in the markup
+    // during rendering. Unlike canvasSize (mutated live by the VNC thread), this reflects the
+    // attributes the browser actually received, so a size change is never detected before the
+    // render that applies (and thereby wipes) it - which would permanently miss the wipe.
+    private Size _renderingCanvasSize = new Size(800, 600);
     
     // Fullscreen functionality
     private bool _isFullscreen = false;
@@ -559,9 +571,13 @@
         // everything painted so far. OnAfterRenderAsync runs only after the browser has
         // acknowledged the DOM update, so repainting here is guaranteed to happen after the
         // wipe - unlike a repaint scheduled at grab time, which could race and be wiped again.
-        if (!firstRender && _lastRenderedCanvasSize != canvasSize)
+        // Compare against _renderingCanvasSize (what this render wrote to the DOM), NOT the
+        // live canvasSize: the VNC thread can change canvasSize while a render built with the
+        // old size is still in flight, and using the live value would consume the change one
+        // render too early and miss the actual wipe (seen on small/fast screens like 800x480).
+        if (!firstRender && _lastRenderedCanvasSize != _renderingCanvasSize)
         {
-            _lastRenderedCanvasSize = canvasSize;
+            _lastRenderedCanvasSize = _renderingCanvasSize;
             _fullRedrawPending = true;
             await RenderPersistentFramebuffer();
         }
